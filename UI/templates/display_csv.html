@@ -1,0 +1,295 @@
+<!DOCTYPE html>
+<html lang="en">
+    <head>
+        <meta charset="utf-8">
+        <title>PPIRL</title>
+        <link rel="shortcut icon" href="../static/images/site/favicon.ico" type="image/x-icon" />
+        <link rel="stylesheet" href="../static/css/site.css" type="text/css">
+        <link rel="stylesheet" href="../static/css/style.css?q=12" type="text/css">
+        <link rel="stylesheet" href="../static/css/ionicons.min.css" type="text/css">
+        <link rel="stylesheet" href="../static/css/select.css?q=12" type="text/css">
+        <link rel="stylesheet" href="../static/css/bootstrap.min.css" type="text/css">
+        <link rel="stylesheet" href="../static/css/footer.css" type="text/css">
+        <link rel="stylesheet" href="../static/css/animate.min.css">
+        <script src="../static/javascript/jquery-3.2.1.min.js"></script>
+        <script src="../static/javascript/popper.min.js"></script>
+        <script src="../static/javascript/bootstrap.min.js"></script>
+        <script src="../static/javascript/site.js"></script>
+        <script src="../static/javascript/choice_panel.js?v=3"></script>
+        <!-- <script src="../static/javascript/grading.js"></script>
+        <script src="../static/javascript/form_submit.js?v=7"></script>
+        <script src="../static/javascript/clickable.js?v=17"></script> -->
+        <script type=text/javascript>
+            $SCRIPT_ROOT = {{ request.script_root|tojson|safe }};
+            $THIS_URL = "{{ thisurl }}";
+            
+            $user_data = "user in url: " + $THIS_URL + ";";
+            $DELTA = {
+            {% for d in delta %}
+                "{{ d[0] }}":{{ d[1]}},
+            {% endfor %}
+            }
+            $DELTA_CDP = {
+            {% for d in delta_cdp %}
+                "{{ d[0] }}":{{ d[1]}},
+            {% endfor %}
+            }
+        </script>
+        <style type="text/css">
+            #table .clickable_cell:hover,
+            #table .clickable_big_cell:hover {
+                cursor: default;
+            }
+        </style>
+    </head>
+
+    <body>
+        <div id="wrapper">
+            <div id="title">
+                <h3>{{ title }}</h3>
+            </div>
+            <!-- <div id="page-number"  style="margin-left: 40%;">
+                （ page: {{ page_number }}/17 ）
+            </div> -->
+            <!-- <div style="clear:both"></div>
+            <div id="content" style="display: flex; flex-wrap: wrap; justify-content: space-between; align-items: flex-start; padding: 20px;">
+                <div style="flex-basis: 49%; min-width: 300px; margin-right: 1%; font-size:1em">
+                    <ul>
+                        <li><strong>Note:</strong> To see all features, please use Google Chrome or Safari browser.</li>
+                        <li>First, view one of the tutorials below:
+                            <ul>
+                                <li><a href="https://urldefense.com/v3/__https://www.youtube.com/watch?v=xM_Yw4h6nn4&amp;list=PLnBH5Dx2WPusqUXvCO6rQT6H_FZfBbDtB&amp;index=3__;!!KwNVnqRv!EszTQ9HGcYFKSeAk9bVLmc9LDIqm3f3NjWCj_YIW2un-aIku0zKI3DmFANgz32f3LLIi26r21thANhBYoiUMQT0$" target="_blank">Short tutorial. 2.16 min video</a></li>
+                                <li><a href="https://urldefense.com/v3/__https://www.youtube.com/watch?v=9MtF4ZkFYXo&amp;list=PLnBH5Dx2WPusqUXvCO6rQT6H_FZfBbDtB&amp;index=5__;!!KwNVnqRv!EszTQ9HGcYFKSeAk9bVLmc9LDIqm3f3NjWCj_YIW2un-aIku0zKI3DmFANgz32f3LLIi26r21thANhBYmjc7llg$" target="_blank">Full 1h webinar</a></li>
+                            </ul>
+                        </li>
+                        <li>For a full list of talks on PPIRL, visit <a href="https://urldefense.com/v3/__https://www.youtube.com/watch?v=fc48J-H0sZs&amp;list=PLnBH5Dx2WPusqUXvCO6rQT6H_FZfBbDtB__;!!KwNVnqRv!EszTQ9HGcYFKSeAk9bVLmc9LDIqm3f3NjWCj_YIW2un-aIku0zKI3DmFANgz32f3LLIi26r21thANhBYPwRMTtE$" target="_blank">this link</a>.</li>
+                        <li>Second, now try making a few linkage decisions yourself to experience how the software works. Remember you can click to see more, and the meter on top tracks how much you saw. Once you have enough information to make the linkage decision, answer the likelihood of each pair being about the same person or different people under the “Choice Panel”.</li>
+                    </ul>
+                </div> -->
+
+
+		<!-- <div  style="flex-basis: 49%; flex-direction: column; align-items: center; width: 30%; background-color: transparent; margin: 0; padding: 0;">
+			<img src="https://i.postimg.cc/sXZbJNM5/legend.png" style="width: 70%; max-width: 800px; height: auto;">
+
+		</div> -->
+
+                <!-- <div class="privacy-budget-div" style="flex-basis: 49%; min-width: 300px; margin-left: 1%;">
+                    
+                    <div>Character disclosed: <span id="character-disclosed-value">0%</span><span id="character-percentage-delta-value"></span></div>
+                    <div class="progress">
+                        <div id="character-disclosed-bar" class="progress-bar progress-bar-striped bg-info" role="progressbar" style="width: 0%" aria-valuenow="30" aria-valuemin="0" aria-valuemax="100"></div>
+                        <div id="character-percentage-delta" class="progress-bar bg-warning" role="progressbar" style="width: 0%" aria-valuenow="20" aria-valuemin="0" aria-valuemax="100"></div>
+                    </div>
+                    
+                    <div>Privacy risk: <span id="privacy-risk-value">0%</span><span id="privacy-risk-delta-value"></span></div>
+                    <div class="progress">
+                        <div id="privacy-risk-bar" class="progress-bar progress-bar-striped bg-info" role="progressbar" style="width: 0%" aria-valuenow="30" aria-valuemin="0" aria-valuemax="100"></div>
+                        <div id="privacy-risk-delta" class="progress-bar bg-warning" role="progressbar" style="width: 0%" aria-valuenow="20" aria-valuemin="0" aria-valuemax="100"></div>
+                    </div>
+                </div> -->
+
+            <form action="/save_survey" method="post" onsubmit="return validate()">
+                <div id="table">
+                    <div id="table_head">
+                        <div class="table_col1">Pair</div>
+                        <div class="table_col2">ID</div>
+                        <div class="table_col3">FFreq</div>
+                        <div class="table_col4 table_names">First Name</div>
+                        <div class="table_col4_5 hidden_element">s</div>
+                        <div class="table_col5 table_names">Last Name</div>
+                        <div class="table_col6">LFreq</div>
+                        <div class="table_col7">DoB(M/D/Y)</div>
+                        <div class="table_col8">Sex</div>
+                        <div class="table_col9">Race</div>
+                        <div class="table_col10">Choice Panel</div>
+                    </div>
+                    <div id="table_content">
+                        {% for r in data %}
+                            {% if loop.index is divisibleby 2 %}
+                            <div class="table_row table_row_even">
+                            {% else %}
+                            <div class="table_row table_row_odd">
+                            {% endif %}
+                                <div class="table_col1 pair_number">{{ loop.index }}</div>
+                                <div class="table_col2 clickable_cell" mode="masked">
+                                    <div class="sub_row1" id="{{ ids[loop.index0][0][0] }}">{{ r[0][1]|safe }}</div>
+                                    <div class="sub_row2"></div>
+                                    <div class="sub_row3" id="{{ ids[loop.index0][1][0] }}">{{ r[1][1]|safe }}</div>
+                                </div>
+                                <div class="table_col3">
+                                    <div class="sub_row1 tooltip1">{{ r[0][2]|safe }}
+                                        <!-- <span class="tooltiptext1">
+                                            {% if 'infinity' in r[0][2] %}
+                                                Very common
+                                            {% elif 'common' in r[0][2] %}
+                                                Common name
+                                            {% elif 'rare' in r[0][2] %}
+                                                Rare name
+                                            {% else %}
+                                                Unique name
+                                            {% endif %}
+                                        </span> -->
+                                    </div>
+                                    <div class="sub_row2"></div>
+                                    <div class="sub_row3 tooltip1">{{ r[1][2]|safe }}
+                                        <!-- <span class="tooltiptext1">
+                                            {% if 'infinity' in r[1][2] %}
+                                                Very common
+                                            {% elif 'common' in r[1][2] %}
+                                                Common name
+                                            {% elif 'rare' in r[1][2] %}
+                                                Rare name
+                                            {% else %}
+                                                Unique name
+                                            {% endif %}
+                                        </span> -->
+                                    </div>
+                                </div>
+                                <div class="{% if 'svg' in icons[loop.index0][2] %}names_big_cell clickable_big_cell{% endif %}">
+                                    <div class="table_col4 table_names {% if 'svg' not in icons[loop.index0][2] %}clickable_cell{% endif %}" mode="masked">
+                                        <div class="sub_row1" id="{{ ids[loop.index0][0][1] }}">{{ r[0][3]|safe }}</div>
+                                        <div class="sub_row2"></div>
+                                        <div class="sub_row3" id="{{ ids[loop.index0][1][1] }}">{{ r[1][3]|safe }}</div>
+                                    </div>
+                                    <div class="table_col4_5">{{ icons[loop.index0][2]|safe }}</div>
+                                    <div class="table_col5 table_names {% if 'svg' not in icons[loop.index0][2] %}clickable_cell{% endif %}" mode="masked">
+                                        <div class="sub_row1" id="{{ ids[loop.index0][0][2] }}">{{ r[0][4]|safe }}</div>
+                                        <div class="sub_row2"></div>
+                                        <div class="sub_row3" id="{{ ids[loop.index0][1][2] }}">{{ r[1][4]|safe }}</div>
+                                    </div>
+                                </div>
+                                <div class="table_col6">
+                                    <div class="sub_row1 tooltip1">{{ r[0][5]|safe }}
+                                        <!-- <span class="tooltiptext1">
+                                            {% if 'infinity' in r[0][5] %}
+                                                Very common
+                                            {% elif 'common' in r[0][5] %}
+                                                Common name
+                                            {% elif 'rare' in r[0][5] %}
+                                                Rare name
+                                            {% else %}
+                                                Unique name
+                                            {% endif %}
+                                        </span> -->
+                                    </div>
+                                    <div class="sub_row2"></div>
+                                    <div class="sub_row3 tooltip1">{{ r[1][5]|safe }}
+                                        <!-- <span class="tooltiptext1">
+                                            {% if 'infinity' in r[1][5] %}
+                                                Very common
+                                            {% elif 'common' in r[1][5] %}
+                                                Common name
+                                            {% elif 'rare' in r[1][5] %}
+                                                Rare name
+                                            {% else %}
+                                                Unique name
+                                            {% endif %}
+                                        </span> -->
+                                    </div>
+                                </div>
+                                <div class="table_col7 clickable_cell" mode="masked">
+                                    <div class="sub_row1" id="{{ ids[loop.index0][0][3] }}">{{ r[0][6]|safe }}</div>
+                                    <div class="sub_row2"></div>
+                                    <div class="sub_row3" id="{{ ids[loop.index0][1][3] }}">{{ r[1][6]|safe }}</div>
+                                </div>
+                                <div class="table_col8 clickable_cell" mode="masked">
+                                    <div class="sub_row1" id="{{ ids[loop.index0][0][4] }}">{{ r[0][7]|safe }}</div>
+                                    <div class="sub_row2"></div>
+                                    <div class="sub_row3" id="{{ ids[loop.index0][1][4] }}">{{ r[1][7]|safe }}</div>
+                                </div>
+                                <div class="table_col9 clickable_cell" mode="masked">
+                                    <div class="sub_row1" id="{{ ids[loop.index0][0][5] }}">{{ r[0][8]|safe }}</div>
+                                    <div class="sub_row2"></div>
+                                    <div class="sub_row3" id="{{ ids[loop.index0][1][5] }}">{{ r[1][8]|safe }}</div>
+                                </div>
+                                <div class="table_col10">
+                                    <div class="choice-panel">
+                                        <div class="choice-label">
+                                            <span class="fill"></span><span>H</span><span class="fill"></span><span>M</span><span class="fill"></span><span>L</span>
+                                            <span class="fill"></span><span>L</span><span class="fill"></span><span>M</span><span class="fill"></span><span>H</span><span class="fill"></span>
+                                        </div>
+                                        <br/>
+                                        <ul class="mrate choice-button">
+                                            <li class="ion-android-arrow-back"></li>
+                                            <li class="ion-android-radio-button-off input_radio pair1" id="q{{ loop.index }}a1" data-value="H_diff"></li>
+                                            <li class="ion-android-remove"></li>
+                                            <li class="ion-android-radio-button-off input_radio pair1" id="q{{ loop.index }}a2" data-value="M_diff"></li>
+                                            <li class="ion-android-remove"></li>
+                                            <li class="ion-android-radio-button-off input_radio pair1" id="q{{ loop.index }}a3" data-value="L_diff"></li>
+                                            <li class="ion-android-add"></li>
+                                            <li class="ion-android-radio-button-off input_radio pair1" id="q{{ loop.index }}a4" data-value="L_same"></li>
+                                            <li class="ion-android-remove"></li>
+                                            <li class="ion-android-radio-button-off input_radio pair1" id="q{{ loop.index }}a5" data-value="M_same"></li>
+                                            <li class="ion-android-remove"></li>
+                                            <li class="ion-android-radio-button-off input_radio pair1" id="q{{ loop.index }}a6" data-value="H_same"></li>
+                                            <li class="ion-android-arrow-forward"></li>
+                                        </ul>
+                                        <br/>
+                                        <ul class="choice-result">
+                                            <li class="diff">Different</li>
+                                            <li class="same">Same</li>
+                                        </ul>
+                                        <input type="hidden" name="choice_{{ loop.index }}" class="choice-hidden" value="">
+                                    </div>
+                                </div>
+                            </div>
+                            <div style="clear:both"></div>
+                        {% endfor %}
+                    </div>
+                </div>
+                <button type="submit" style="margin-left: 45%; margin-top: 45px;">Submit</button>
+            </form>
+            <!-- End of div content -->
+        </div>
+
+
+        </div>
+
+            </div>
+            
+        </div>
+
+        <div id="footer_filler"></div>
+        <footer class="footer">
+            <div class="container">
+                <span class="text-muted">Copyright © 2017 • Population Informatics Research Group • Texas A&M University</span>
+            </div>
+        </footer>
+    </body>
+
+    
+
+    
+   
+    <script type="text/javascript">
+        $(document).ready(function() {
+            $('.input_radio').on('click', function() {
+                var $this = $(this);
+                var $choicePanel = $this.closest('.choice-panel');
+                var $siblings = $choicePanel.find('.input_radio');
+                var $hiddenInput = $choicePanel.find('.choice-hidden');
+                var $diff = $choicePanel.find('.diff');
+                var $same = $choicePanel.find('.same');
+        
+                // Toggle radio button state
+                $siblings.removeClass('ion-android-radio-button-on').addClass('ion-android-radio-button-off');
+                $this.removeClass('ion-android-radio-button-off').addClass('ion-android-radio-button-on');
+        
+                // Get the selected value from data-value
+                var selectedValue = $this.data('value');
+        
+                // Update the hidden input with the selected value
+                $hiddenInput.val(selectedValue);
+        
+                // Highlight "Different" or "Same" based on the value
+                $diff.removeClass('active');
+                $same.removeClass('active');
+                if (selectedValue.includes('diff')) {
+                    $diff.addClass('active');
+                } else if (selectedValue.includes('same')) {
+                    $same.addClass('active');
+                }
+            });
+        });
+        </script>
+</html>

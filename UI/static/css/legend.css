@@ -1,0 +1,33 @@
+
+#legend {
+    border-radius: 8px;
+}
+
+#legend h3 {
+    font-size: 1.2em;
+    color: #333;
+}
+
+.legend-section h4 {
+    font-size: 1em;
+    margin-top: 20px;
+    color: #333;
+}
+
+#legend ul {
+    list-style-type: none;
+    padding: 0;
+}
+
+#legend li {
+    margin-bottom: 10px;
+    align-items: center;
+    display: flex;
+}
+
+#legend li img {
+    width: 25px;
+    margin-right: 10px;
+}
+
+

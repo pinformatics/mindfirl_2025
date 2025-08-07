@@ -1,0 +1,111 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Admin Interface</title>
+    <link rel="stylesheet" href="//code.jquery.com/ui/1.12.1/themes/base/jquery-ui.css">
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/admin.css') }}">
+    <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
+    <script src="https://code.jquery.com/ui/1.12.1/jquery-ui.min.js"></script>
+    <script>
+        $(document).ready(function() {
+            $("#start_date, #end_date").datepicker({
+                dateFormat: 'yy-mm-dd',
+                changeMonth: true,
+                changeYear: true
+            });
+
+            function updateSubmissionCount() {
+                var start_date = $("#start_date").val();
+                var end_date = $("#end_date").val();
+                $.ajax({
+                    url: '/admin/submission_count',
+                    method: 'POST',
+                    data: { start_date: start_date, end_date: end_date, password: 'admin123' },
+                    success: function(response) {
+                        $("#submission_count").text(response.key_count);
+                    },
+                    error: function() {
+                        $("#submission_count").text("Error fetching count");
+                    }
+                });
+            }
+
+            $("#start_date, #end_date").on('change', updateSubmissionCount);
+            updateSubmissionCount();
+
+            $("#clear_db_form").submit(function(e) {
+                e.preventDefault();
+                if (confirm("Are you sure you want to clear the database? This action cannot be undone.")) {
+                    $.ajax({
+                        url: '{{ url_for("admin_clear_db") }}',
+                        method: 'POST',
+                        data: $(this).serialize(),
+                        success: function(response) {
+                            alert(response.message);
+                            updateSubmissionCount();
+                        },
+                        error: function() {
+                            alert("Error clearing DB");
+                        }
+                    });
+                }
+            });
+
+            $("#dump_db_btn").click(function() {
+                $("#dump_start_date").val("");
+                $("#dump_end_date").val("");
+                $("#dump_db_form").submit();
+            });
+
+            $("#custom_range_btn").click(function() {
+                $("#date_range_fields").toggle();
+                if ($("#date_range_fields").is(":visible")) {
+                    $(this).text("Hide Range");
+                } else {
+                    $(this).text("Custom Range");
+                    $("#start_date, #end_date").val("");
+                    updateSubmissionCount();
+                }
+            });
+
+            $("#dump_db_range_btn").click(function() {
+                $("#dump_start_date").val($("#start_date").val());
+                $("#dump_end_date").val($("#end_date").val());
+                $("#dump_db_form").submit();
+            });
+        });
+    </script>
+</head>
+<body>
+    <div class="container">
+        <h1>Admin Interface</h1>
+        <div class="status-container">Redis Status: {{ redis_status }}</div>
+        <div class="count-container">Number of Submissions: <span id="submission_count">{{ key_count }}</span></div>
+
+        <div class="form-container">
+            <form id="clear_db_form" method="post" action="{{ url_for('admin_clear_db') }}">
+                <div id="date_range_fields">
+                    <label class="date-label" for="start_date">Start Date:</label>
+                    <input type="text" id="start_date" name="start_date" class="date-input" autocomplete="off"><br>
+                    <label class="date-label" for="end_date">End Date:</label>
+                    <input type="text" id="end_date" name="end_date" class="date-input" autocomplete="off"><br>
+                </div>
+                <input type="hidden" name="password" value="admin123">
+                <div class="button-container">
+                    <button type="submit">Clear DB</button>
+                    <button type="button" id="dump_db_btn">Dump DB</button>
+                    <button type="button" id="custom_range_btn">Custom Range</button>
+                </div>
+                <div class="button-container" id="date_range_fields">
+                    <button type="button" id="dump_db_range_btn">Dump DB in Range</button>
+                </div>
+            </form>
+            <form id="dump_db_form" method="post" action="{{ url_for('admin_dump_db') }}" style="display: none;">
+                <input type="hidden" name="start_date" id="dump_start_date">
+                <input type="hidden" name="end_date" id="dump_end_date">
+                <input type="hidden" name="password" value="admin123">
+            </form>
+        </div>
+    </div>
+</body>
+</html>

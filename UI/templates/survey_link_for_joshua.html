@@ -1,0 +1,788 @@
+<!DOCTYPE html>
+<html lang="en">
+    <head>
+        <meta charset="utf-8">
+        <title>PPIRL</title>
+        <link rel="shortcut icon" href="../static/images/site/favicon.ico" type="image/x-icon" />
+        <link rel="stylesheet" href="../static/css/site.css" type="text/css">
+        <link rel="stylesheet" href="../static/css/style.css?q=12" type="text/css">
+        <link rel="stylesheet" href="../static/css/ionicons.min.css" type="text/css">
+        <link rel="stylesheet" href="../static/css/select.css?q=12" type="text/css">
+        <link rel="stylesheet" href="../static/css/bootstrap.min.css" type="text/css">
+        <link rel="stylesheet" href="../static/css/footer.css" type="text/css">
+        <link rel="stylesheet" href="../static/css/animate.min.css">
+        <script src="../static/javascript/jquery-3.2.1.min.js"></script>
+        <script src="../static/javascript/popper.min.js"></script>
+        <script src="../static/javascript/bootstrap.min.js"></script>
+        <script src="../static/javascript/site.js"></script>
+        <script src="../static/javascript/choice_panel.js?v=3"></script>
+        <!-- <script src="../static/javascript/grading.js"></script> -->
+        <!-- <script src="../static/javascript/form_submit.js?v=7"></script> -->
+        <script src="../static/javascript/clickable.js?v=17"></script>
+        <script type=text/javascript>
+            $SCRIPT_ROOT = {{ request.script_root|tojson|safe }};
+            $THIS_URL = "{{ thisurl }}";
+            
+            $user_data = "user in url: " + $THIS_URL + ";";
+            $DELTA = {
+            {% for d in delta %}
+                "{{ d[0] }}":{{ d[1]}},
+            {% endfor %}
+            }
+            $DELTA_CDP = {
+            {% for d in delta_cdp %}
+                "{{ d[0] }}":{{ d[1]}},
+            {% endfor %}
+            }
+        </script>
+        
+    </head>
+
+    <body>
+        <div id="wrapper">
+            <div id="title">
+                <h3>{{ title }}</h3>
+            </div>
+           <!--  <div id="page-number"  style="margin-left: 40%;">
+                （ page: {{ page_number }}/17 ）
+            </div> -->
+            <div style="clear:both"></div>
+            <div id="content" style="display: flex; flex-wrap: wrap; justify-content: space-between; align-items: flex-start; padding: 20px;">
+                <div style="flex-basis: 49%; min-width: 300px; margin-right: 1%; font-size:1em">
+                    <ul>
+                        <li>Note: To see all features, please use Google Chrome or Safari browser.</li>
+                        <li>First, view one of the tutorials below:
+                            <ul>
+                                <li><a href="https://urldefense.com/v3/__https://www.youtube.com/watch?v=xM_Yw4h6nn4&amp;list=PLnBH5Dx2WPusqUXvCO6rQT6H_FZfBbDtB&amp;index=3__;!!KwNVnqRv!EszTQ9HGcYFKSeAk9bVLmc9LDIqm3f3NjWCj_YIW2un-aIku0zKI3DmFANgz32f3LLIi26r21thANhBYoiUMQT0$" target="_blank">Short tutorial. 2.16 min video</a></li>
+                                <li><a href="https://urldefense.com/v3/__https://www.youtube.com/watch?v=9MtF4ZkFYXo&amp;list=PLnBH5Dx2WPusqUXvCO6rQT6H_FZfBbDtB&amp;index=5__;!!KwNVnqRv!EszTQ9HGcYFKSeAk9bVLmc9LDIqm3f3NjWCj_YIW2un-aIku0zKI3DmFANgz32f3LLIi26r21thANhBYmjc7llg$" target="_blank">Full 1h webinar</a></li>
+                            </ul>
+                        </li>
+                        <li>For a full list of talks on PPIRL, visit <a href="https://urldefense.com/v3/__https://www.youtube.com/watch?v=fc48J-H0sZs&amp;list=PLnBH5Dx2WPusqUXvCO6rQT6H_FZfBbDtB__;!!KwNVnqRv!EszTQ9HGcYFKSeAk9bVLmc9LDIqm3f3NjWCj_YIW2un-aIku0zKI3DmFANgz32f3LLIi26r21thANhBYPwRMTtE$" target="_blank">this link</a>.</li>
+                        <li>Second, now try making a few linkage decisions yourself to experience how the software works. Remember you can click to see more, and the meter on top tracks how much you saw. Once you have enough information to make the linkage decision, answer the likelihood of each pair being about the same person or different people under the “Choice Panel”.</li>
+                    </ul>
+                </div>
+
+		<!-- <div  style="flex-basis: 49%; flex-direction: column; align-items: center; width: 30%; background-color: transparent; margin: 0; padding: 0;">
+			<img src="https://i.postimg.cc/sXZbJNM5/legend.png" style="width: 70%; max-width: 800px; height: auto;">
+
+		</div> -->
+        <div id="legend" style="flex-basis: 49%; flex-direction: column; align-items: center; width: 20%; background-color: transparent; margin: 0; padding: 0;">
+            <h3 style="font-size: 1.5em; width: 100%; text-align: left;"><strong>Legend</strong></h3>
+            <div style="display: flex; width: 60%; max-width: 800px;  padding: 0;">
+                <div class="legend-section" style="flex: 1; padding: 0;">
+                    <h4 style="padding: 0; margin: 0; white-space: nowrap; font-size: 0.9em;"><strong>Highlight discrepancies</strong></h4> 
+                    <ul style="padding: 0; margin: 0;">
+                        <li><img src="../static/images/site/missing.png" alt="Missing fields" style="width: 20px; height: 20px;"> Missing fields</li>
+                        <li><img src="../static/images/site/replace.png" alt="Different characters" style="width: 20px; height: 20px;"> Different characters</li>
+                        <li><img src="../static/images/site/indel.png" alt="Extra characters" style="width: 20px; height: 20px;"> Extra characters</li>
+                        <li><img src="../static/images/site/transpose.png" alt="Transposed characters" style="width: 20px; height: 20px;"> Transposed characters</li>
+                        <li><img src="../static/images/site/name_swap.png" alt="Name/date swaps" style="width: 20px; height: 20px;"> Name/date swaps</li>
+                        <li><img src="../static/images/site/diff.png" alt="Major field differences" style="width: 20px; height: 20px;"> Major field differences</li>
+                    </ul>
+                </div>
+                <div class="legend-section" style="flex: 1; padding: 0;">
+                    <h4 style="padding: 0; margin: 0; white-space: nowrap; font-size: 0.9em;"><strong>Highlight data details for privacy</strong></h4> <!-- Reduced font size -->
+                    <ul style="padding: 0; margin: 0;">
+                        <li><img src="../static/images/site/checkmark.png" alt="Same fields" style="width: 20px; height: 20px;"> Same fields</li>
+                        <li><span class="icon" style="color: black;">***&nbsp;</span>Same characters</li>
+                    </ul>
+                </div>
+            </div>
+        </div>
+        
+
+
+                <div class="privacy-budget-div" style="flex-basis: 49%; min-width: 300px; margin-left: 1%;">
+                    
+                    <div>Character disclosed: <span id="character-disclosed-value">0%</span><span id="character-percentage-delta-value"></span></div>
+                    <div class="progress">
+                        <div id="character-disclosed-bar" class="progress-bar progress-bar-striped bg-info" role="progressbar" style="width: 0%" aria-valuenow="30" aria-valuemin="0" aria-valuemax="100"></div>
+                        <div id="character-percentage-delta" class="progress-bar bg-warning" role="progressbar" style="width: 0%" aria-valuenow="20" aria-valuemin="0" aria-valuemax="100"></div>
+                    </div>
+                    
+                    <div>Privacy risk: <span id="privacy-risk-value">0%</span><span id="privacy-risk-delta-value"></span></div>
+                    <div class="progress">
+                        <div id="privacy-risk-bar" class="progress-bar progress-bar-striped bg-info" role="progressbar" style="width: 0%" aria-valuenow="30" aria-valuemin="0" aria-valuemax="100"></div>
+                        <div id="privacy-risk-delta" class="progress-bar bg-warning" role="progressbar" style="width: 0%" aria-valuenow="20" aria-valuemin="0" aria-valuemax="100"></div>
+                    </div>
+                </div>
+                
+                <div id="table">
+                    <div id="table_head">
+                        <div class="table_col1">Pair</div>
+                        <div class="table_col2">ID</div>
+                        <div class="table_col3">FFreq</div>
+                        <div class="table_col4 table_names">First Name</div>
+                        <div class="table_col4_5 hidden_element">s</div>
+                        <div class="table_col5 table_names">Last Name</div>
+                        <div class="table_col6">LFreq</div>
+                        <div class="table_col7">DoB(M/D/Y)</div>
+                        <div class="table_col8">Sex</div>
+                        <div class="table_col9">Race</div>
+                        <div class="table_col10">Choice Panel</div>
+                    </div>
+                    <div id="table_content">
+                        {% for r in data %}
+                            {% if loop.index is divisibleby 2 %}
+                        <div class="table_row table_row_even">
+                            {% else %}
+                        <div class="table_row table_row_odd">
+                            {% endif %}
+                            <div class="table_col1 pair_number">{{ loop.index }}</div>
+                            <div class="table_col2 clickable_cell" id = "test_col" mode="masked">
+                                <div class="sub_row1" id="{{ ids[loop.index0][0][0] }}">
+                                    {{ r[0][1]|safe }}
+                                </div>
+                                <div class="sub_row2">
+                                    {{ icons[loop.index0][0]|safe }}
+                                </div>
+                                <div class="sub_row3" id="{{ ids[loop.index0][1][0] }}">
+                                    {{ r[1][1]|safe }}
+                                </div>
+                            </div>
+                            <div class="table_col3">
+                                <div class="sub_row1 tooltip1">
+                                    {{ r[0][2]|safe }}
+                                    <span class="tooltiptext1">
+                                        {% if 'infinity' in r[0][2] %}
+                                            Very common
+                                        {% elif 'common' in r[0][2] %}
+                                            Common name
+                                        {% elif 'rare' in r[0][2] %}
+                                            Rare name
+                                        {% else %}
+                                            Unique name
+                                        {% endif %}
+                                    </span>
+                                </div>
+                                <div class="sub_row2">
+                                </div>
+                                <div class="sub_row3  tooltip1">
+                                    {{ r[1][2]|safe }}
+                                    <span class="tooltiptext1">
+                                        {% if 'infinity' in r[1][2] %}
+                                            Very common
+                                        {% elif 'common' in r[1][2] %}
+                                            Common name
+                                        {% elif 'rare' in r[1][2] %}
+                                            Rare name
+                                        {% else %}
+                                            Unique name
+                                        {% endif %}
+                                    </span>
+                                </div>
+                            </div>
+                            
+                            <div class="{% if 'svg' in icons[loop.index0][2] %}names_big_cell clickable_big_cell{% endif %}">
+                            <div class="table_col4 table_names {% if 'svg' not in icons[loop.index0][2] %}clickable_cell{% endif %}" mode="masked">
+                                <div class="sub_row1" id="{{ ids[loop.index0][0][1] }}">
+                                    {{ r[0][3]|safe }}
+                                </div>
+                                <div class="sub_row2">
+                                    {{ icons[loop.index0][1]|safe }}
+                                </div>
+                                <div class="sub_row3" id="{{ ids[loop.index0][1][1] }}">
+                                    {{ r[1][3]|safe }}
+                                </div>
+                            </div>
+                            <div class="table_col4_5">
+                                {{ icons[loop.index0][2]|safe }}
+                            </div>
+                            <div class="table_col5 table_names {% if 'svg' not in icons[loop.index0][2] %}clickable_cell{% endif %}" mode="masked">
+                                <div class="sub_row1" id="{{ ids[loop.index0][0][2] }}">
+                                    {{ r[0][4]|safe }}
+                                </div>
+                                <div class="sub_row2">
+                                    {{ icons[loop.index0][3]|safe }}
+                                </div>
+                                <div class="sub_row3" id="{{ ids[loop.index0][1][2] }}">
+                                    {{ r[1][4]|safe }}
+                                </div>
+                            </div>
+                            </div>
+                            <div class="table_col6">
+                                <div class="sub_row1 tooltip1">
+                                    {{ r[0][5]|safe }}
+                                    <span class="tooltiptext1">
+                                        {% if 'infinity' in r[0][5] %}
+                                            Very common
+                                        {% elif 'common' in r[0][5] %}
+                                            Common name
+                                        {% elif 'rare' in r[0][5] %}
+                                            Rare name
+                                        {% else %}
+                                            Unique name
+                                        {% endif %}
+                                    </span>
+                                </div>
+                                <div class="sub_row2">
+                                </div>
+                                <div class="sub_row3 tooltip1">
+                                    {{ r[1][5]|safe }}
+                                    <span class="tooltiptext1">
+                                        {% if 'infinity' in r[1][5] %}
+                                            Very common
+                                        {% elif 'common' in r[1][5] %}
+                                            Common name
+                                        {% elif 'rare' in r[1][5] %}
+                                            Rare name
+                                        {% else %}
+                                            Unique name
+                                        {% endif %}
+                                    </span>
+                                </div>
+                            </div>
+                            <div class="table_col7 clickable_cell" mode="masked">
+                                <div class="sub_row1" id="{{ ids[loop.index0][0][3] }}">
+                                    {{ r[0][6]|safe }}
+                                </div>
+                                <div class="sub_row2">
+                                    {{ icons[loop.index0][4]|safe }}
+                                </div>
+                                <div class="sub_row3" id="{{ ids[loop.index0][1][3] }}">
+                                    {{ r[1][6]|safe }}
+                                </div>
+                            </div>
+                            <div class="table_col8 clickable_cell" mode="masked">
+                                <div class="sub_row1" id="{{ ids[loop.index0][0][4] }}">
+                                    {{ r[0][7]|safe }}
+                                </div>
+                                <div class="sub_row2">
+                                    {{ icons[loop.index0][5]|safe }}
+                                </div>
+                                <div class="sub_row3" id="{{ ids[loop.index0][1][4] }}">
+                                    {{ r[1][7]|safe }}
+                                </div>
+                            </div>
+                            <div class="table_col9 clickable_cell" mode="masked">
+                                <div class="sub_row1" id="{{ ids[loop.index0][0][5] }}">
+                                    {{ r[0][8]|safe }}
+                                </div>
+                                <div class="sub_row2">
+                                    {{ icons[loop.index0][6]|safe }}
+                                </div>
+                                <div class="sub_row3" id="{{ ids[loop.index0][1][5] }}">
+                                    {{ r[1][8]|safe }}
+                                </div>
+                            </div>
+                            <div class="table_col10">
+                                <div class="choice-panel">
+                                    <div class="choice-label">
+                                        <span class="fill"></span>
+                                        <span>H</span>
+                                        <span class="fill"></span>
+                                        <span>M</span>
+                                        <span class="fill"></span>
+                                        <span>L</span>
+                                        <span class="fill"></span>
+                                        <span>L</span>
+                                        <span class="fill"></span>
+                                        <span>M</span>
+                                        <span class="fill"></span>
+                                        <span>H</span>
+                                        <span class="fill"></span>
+                                    </div>
+                                    <br/>
+                                    <ul class="mrate choice-button">
+                                        <li class="ion-android-arrow-back"></li>
+                                        <li class="ion-android-radio-button-off input_radio pair1" id="q{{ loop.index }}a1"></li>
+                                        <li class="ion-android-remove"></li>
+                                        <li class="ion-android-radio-button-off input_radio pair1" id="q{{ loop.index }}a2"></li>
+                                        <li class="ion-android-remove"></li>
+                                        <li class="ion-android-radio-button-off input_radio pair1" id="q{{ loop.index }}a3"></li>
+                                        <li class="ion-android-add"></li>
+                                        <li class="ion-android-radio-button-off input_radio pair1" id="q{{ loop.index }}a4"></li>
+                                        <li class="ion-android-remove"></li>
+                                        <li class="ion-android-radio-button-off input_radio pair1" id="q{{ loop.index }}a5"></li>
+                                        <li class="ion-android-remove"></li>
+                                        <li class="ion-android-radio-button-off input_radio pair1" id="q{{ loop.index }}a6"></li>
+                                        <li class="ion-android-arrow-forward"></li>
+                                    </ul>
+                                    <br/>
+                                    <ul class="choice-result">
+                                        <li class="diff">Different</li>
+                                        <li class="same">Same</li>
+                                    </ul>
+                                </div>
+                            </div>
+                        </div>
+                        <div style="clear:both"></div>
+                        {% endfor %}
+                    </div>
+                </div>
+
+            </div> 
+            
+            <!-- End of div content -->
+        </div>
+
+<!--
+                        &nbsp;&nbsp;If you would like to review the full tutorial, <a href="https://mindfil4.herokuapp.com/introduction" target="_blank">click here</a>. 
+
+                <br> <br>
+                
+                    <div id="survey" style="width: 80%; margin-left:50px;  line-height: 1.8;">
+                    <h3>Survey</h3>
+-->
+		    <form method="GET" onsubmit="return end_RL()"> 
+                  
+                    <!-- <form action="/mindfirl-userstudy_orig/save_survey" method="post" onsubmit="return validate()">
+
+                        <ol>
+
+                            <li><strong>Are there things you like</strong> about the software that you would tell your neighbors? Please rank order the following items from most important (1) to least important (6). <br>
+ 
+                       <ol type="A">
+                                    <li>Software allows for minimum disclosure - identifiers can be opened on an ‘as needed’ basis</li>
+                                    <li>Software allows for tracking disclosures to enhance accountability</li>
+                                    <li>Software is configurable to optimize safe data use per project</li>
+                                    <li>Software allows for participants to feel good about the use of their data in a safe manner while still having confidence in the quality of the results.</li>
+                                    <li>Software allows for better accuracy in the record linkage process and the study results</li>
+                                    <li>Software allows for comprehensive privacy protection that is not available now</li>
+                                </ol>
+
+                                Rank 1: <select id="q1_r1" class="q1" name="q1_r1"></select>
+                                <br>
+
+                                Rank 2: <select id="q1_r2" class="q1" name="q1_r2"></select>
+                                <br>
+
+                                Rank 3: <select id="q1_r3" class="q1" name="q1_r3"></select>
+                                <br>
+
+                                Rank 4: <select id="q1_r4" class="q1" name="q1_r4"></select>
+                                <br>
+                                
+                                Rank 5: <select id="q1_r5" class="q1" name="q1_r5"></select>
+                                <br>
+
+                                Rank 6: <select id="q1_r6" class="q1" name="q1_r6"></select>
+                                <br>
+
+                                &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp;<button id="reset_q1" type="button" class="button-link" onclick="reset_question(1)">reset</button>  (If you want to change your choices, please click on reset to clear everything and start over)
+                            </li>
+
+                             <br>
+
+                            <li><strong>Are there concerning things</strong> about the software that you would tell your neighbors? Please rank order the following items from most important (1) to least important (5).<br>
+   
+                            <ol type="A">
+                                    <li>Still potential for some information disclosure which may lead to false sense of protection</li>
+                                    <li>Still potential for misuse of information by authorized users (e.g. negligence, not sufficient training)</li>
+                                    <li>Still potential for hacking (i.e., misuse of information by unauthorized users)</li>
+                                    <li>Still requires checks and balances beyond the software to ensure protection (e.g., accountability for software configuration, checking for secure system setup)</li>
+                                    <li>Still potential for errors in the linkage process</li>
+                                </ol> 
+
+                                Rank 1: <select id="q2_r1" class="q2" name="q2_r1"></select>
+                                <br>
+
+                                Rank 2: <select id="q2_r2" class="q2" name="q2_r2"></select>
+                                <br>
+
+                                Rank 3: <select id="q2_r3" class="q2" name="q2_r3"></select>
+                                <br>
+
+                                Rank 4: <select id="q2_r4" class="q2" name="q2_r4"></select>
+                                <br>
+                                
+                                Rank 5: <select id="q2_r5" class="q2" name="q2_r5"></select>
+                                <br>
+
+                                 &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp;<button id="reset_q1" type="button" class="button-link" onclick="reset_question(2)">reset</button>  (If you want to change your choices, please click on reset to clear everything and start over)
+                            </li>
+
+                             <br>
+
+                            <li><strong>What more would you like to know?</strong> Please choose the five most important themes for you and rank order them from most important (1) to least important (5).<br>
+                                <ol type="A">
+                                    <li>Why are identifiers needed for this research?</li>
+                                    <li>What other information, besides personal identifiers, are used during linkage?</li>
+                                    <li>Who is the data custodian of the linked data (i.e., who has control of the data), where is the linkage taking place (i.e. which organization) and who will be doing it?</li>
+                                    <li>What accountability mechanisms (e.g., background checks, training, protocols) exist for persons involved in the research?</li>
+                                    <li>What infrastructure is in place to safeguard the data?</li>
+                                    <li>What is the purpose and scope of the study, including how the data will be used after the linkage?</li>
+                                    <li>Will the linked data be used for other purposes?</li>
+                                    <li>How will the results disseminated?</li>
+                                    <li>What is the protocol in the case of misuse?</li>
+                                    <li>Has the software been used before for research and has it enhanced protection as well as improve research quality?</li>
+                                    <li>Where can I get more information?</li>
+                                </ol>
+ 
+                            Rank 1: <select id="q3_r1" class="q3" name="q3_r1"></select>
+                                <br>
+
+                                Rank 2: <select id="q3_r2" class="q3" name="q3_r2"></select>
+                                <br>
+
+                                Rank 3: <select id="q3_r3" class="q3" name="q3_r3"></select>
+                                <br>
+
+                                Rank 4: <select id="q3_r4" class="q3" name="q3_r4"></select>
+                                <br>
+                                
+                                Rank 5: <select id="q3_r5" class="q3" name="q3_r5"></select>
+                                <br>
+
+                                 &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp;<button id="reset_q1" type="button" class="button-link" onclick="reset_question(3)">reset</button>  (If you want to change your choices, please click on reset to clear everything and start over)
+                            </li>
+
+                            <br>
+
+                            <li><strong>How necessary is it to include the following items</strong> in a frequently asked questions (FAQ) webpage for a research project using the software?  
+
+                            <table>
+                                <tr>
+                                    <th class="header">Item</th>
+                                    <th class="header">Not necessary</th>
+                                    <th class="header">Somewhat necessary</th>
+                                    <th class="header">Necessary</th>
+                                    <th class="header">Very necessary</th>
+                                    <th class="header">Essential</th>
+                                </tr>
+
+                                <tr>
+                                    <td class="td_item">Why are identifiers needed for this research?</td>
+                                    <td class="td_radio"><input type="radio" name="q4_a" value="Not necessary"></td>
+                                    <td class="td_radio"><input type="radio" name="q4_a" value="Somewhat necessary"></td>
+                                    <td class="td_radio"><input type="radio" name="q4_a" value="Necessary"></td>
+                                    <td class="td_radio"><input type="radio" name="q4_a" value="Very necessary"></td>
+                                    <td class="td_radio"><input type="radio" name="q4_a" value="Essential"></td>
+                                </tr>    
+
+                                <tr>
+                                    <td class="td_item">What other information, besides personal identifiers, are used during linkage?</td>
+                                    <td class="td_radio"><input type="radio" name="q4_b" value="Not necessary"></td>
+                                    <td class="td_radio"><input type="radio" name="q4_b" value="Somewhat necessary"></td>
+                                    <td class="td_radio"><input type="radio" name="q4_b" value="Necessary"></td>
+                                    <td class="td_radio"><input type="radio" name="q4_b" value="Very necessary"></td>
+                                    <td class="td_radio"><input type="radio" name="q4_b" value="Essential"></td>
+                                </tr>    
+
+                                <tr>
+                                    <td class="td_item">Who is the data custodian of the linked data (i.e., who has control of the data), where is the linkage taking place (i.e. which organization) and who will be doing it?</td>
+                                    <td class="td_radio"><input type="radio" name="q4_c" value="Not necessary"></td>
+                                    <td class="td_radio"><input type="radio" name="q4_c" value="Somewhat necessary"></td>
+                                    <td class="td_radio"><input type="radio" name="q4_c" value="Necessary"></td>
+                                    <td class="td_radio"><input type="radio" name="q4_c" value="Very necessary"></td>
+                                    <td class="td_radio"><input type="radio" name="q4_c" value="Essential"></td>
+                                </tr>    
+
+                                <tr>
+                                    <td class="td_item">What accountability mechanisms (e.g., background checks, training, protocols) exist for persons involved in the research?</td>
+                                    <td class="td_radio"><input type="radio" name="q4_d" value="Not necessary"></td>
+                                    <td class="td_radio"><input type="radio" name="q4_d" value="Somewhat necessary"></td>
+                                    <td class="td_radio"><input type="radio" name="q4_d" value="Necessary"></td>
+                                    <td class="td_radio"><input type="radio" name="q4_d" value="Very necessary"></td>
+                                    <td class="td_radio"><input type="radio" name="q4_d" value="Essential"></td>
+                                </tr>    
+
+                                <tr>
+                                    <td class="td_item">What infrastructure is in place to safeguard the data?</td>
+                                    <td class="td_radio"><input type="radio" name="q4_e" value="Not necessary"></td>
+                                    <td class="td_radio"><input type="radio" name="q4_e" value="Somewhat necessary"></td>
+                                    <td class="td_radio"><input type="radio" name="q4_e" value="Necessary"></td>
+                                    <td class="td_radio"><input type="radio" name="q4_e" value="Very necessary"></td>
+                                    <td class="td_radio"><input type="radio" name="q4_e" value="Essential"></td>
+                                </tr>    
+
+                                <tr>
+                                    <td class="td_item">What is the purpose and scope of the study, including how the data will be used after the linkage?</td>
+                                    <td class="td_radio"><input type="radio" name="q4_f" value="Not necessary"></td>
+                                    <td class="td_radio"><input type="radio" name="q4_f" value="Somewhat necessary"></td>
+                                    <td class="td_radio"><input type="radio" name="q4_f" value="Necessary"></td>
+                                    <td class="td_radio"><input type="radio" name="q4_f" value="Very necessary"></td>
+                                    <td class="td_radio"><input type="radio" name="q4_f" value="Essential"></td>
+                                </tr>    
+
+                                <tr>
+                                    <td class="td_item">Will the linked data be used for other purposes?</td>
+                                    <td class="td_radio"><input type="radio" name="q4_g" value="Not necessary"></td>
+                                    <td class="td_radio"><input type="radio" name="q4_g" value="Somewhat necessary"></td>
+                                    <td class="td_radio"><input type="radio" name="q4_g" value="Necessary"></td>
+                                    <td class="td_radio"><input type="radio" name="q4_g" value="Very necessary"></td>
+                                    <td class="td_radio"><input type="radio" name="q4_g" value="Essential"></td>
+                                </tr>    
+
+                                <tr>
+                                    <td class="td_item">How will the results disseminated?</td>
+                                    <td class="td_radio"><input type="radio" name="q4_h" value="Not necessary"></td>
+                                    <td class="td_radio"><input type="radio" name="q4_h" value="Somewhat necessary"></td>
+                                    <td class="td_radio"><input type="radio" name="q4_h" value="Necessary"></td>
+                                    <td class="td_radio"><input type="radio" name="q4_h" value="Very necessary"></td>
+                                    <td class="td_radio"><input type="radio" name="q4_h" value="Essential"></td>
+                                </tr>    
+
+                                 <tr>
+                                    <td class="td_item">What is the protocol in the case of misuse?</td>
+                                    <td class="td_radio"><input type="radio" name="q4_i" value="Not necessary"></td>
+                                    <td class="td_radio"><input type="radio" name="q4_i" value="Somewhat necessary"></td>
+                                    <td class="td_radio"><input type="radio" name="q4_i" value="Necessary"></td>
+                                    <td class="td_radio"><input type="radio" name="q4_i" value="Very necessary"></td>
+                                    <td class="td_radio"><input type="radio" name="q4_i" value="Essential"></td>
+                                </tr>    
+
+                                 <tr>
+                                    <td class="td_item">Has the software been used before for research and has it enhanced protection as well as improve research quality?</td>
+                                    <td class="td_radio"><input type="radio" name="q4_j" value="Not necessary"></td>
+                                    <td class="td_radio"><input type="radio" name="q4_j" value="Somewhat necessary"></td>
+                                    <td class="td_radio"><input type="radio" name="q4_j" value="Necessary"></td>
+                                    <td class="td_radio"><input type="radio" name="q4_j" value="Very necessary"></td>
+                                    <td class="td_radio"><input type="radio" name="q4_j" value="Essential"></td>
+                                </tr>    
+
+                                 <tr>
+                                    <td class="td_item">Where can I get more information?</td>
+                                    <td class="td_radio"><input type="radio" name="q4_k" value="Not necessary"></td>
+                                    <td class="td_radio"><input type="radio" name="q4_k" value="Somewhat necessary"></td>
+                                    <td class="td_radio"><input type="radio" name="q4_k" value="Necessary"></td>
+                                    <td class="td_radio"><input type="radio" name="q4_k" value="Very necessary"></td>
+                                    <td class="td_radio"><input type="radio" name="q4_k" value="Essential"></td>
+                                </tr>    
+                            </table>                       
+
+                            </li>
+
+                            <br>
+
+                            <li>
+                                Please provide us with your email (<span id="email_hover" class="email_hover">why?</span>)
+                               <span id = "popup" style="visibility: hidden">
+                                  In our preliminary voting, we encountered duplicate votes due to system errors. As a result, we are asking for your email address so that we can ensure there is only one vote for you. Once we have cleaned the data, we will delete your email to ensure that your responses are anonymous.
+                                </span> 
+                      <input id="email" type="text" name="email">
+                            </li>
+
+                            <br>
+
+                            <li>
+                                Thank you for your time. We will follow up in a few days. Please let us know if you have any other comments.<br>
+                                <textarea id="comments" rows="4" cols="120" name="comments"></textarea>
+                            </li>
+                        
+                        </ol> -->
+           
+                        <button type="submit" style="margin-left: 45% " >Submit</button>
+                    
+                    </form>
+                </div>
+
+            </div>
+            
+        </div>
+
+        <div id="footer_filler"></div>
+        <footer class="footer">
+            <div class="container">
+                <span class="text-muted">Copyright © 2017 • Population Informatics Research Group • Texas A&M University</span>
+            </div>
+        </footer>
+    </body>
+
+    
+
+    
+    <script  type=text/javascript>
+        $('#email_hover').attr('title', 'In our preliminary voting, we encountered duplicate votes due to system errors. As a result, we are asking for your email address so that we can ensure there is only one vote for you. Once we have cleaned the data, we will delete your email to ensure that your responses are anonymous.');
+        $('#email_hover').on('click', function(){
+            alert('In our preliminary voting, we encountered duplicate votes due to system errors. As a result, we are asking for your email address so that we can ensure there is only one vote for you. Once we have cleaned the data, we will delete your email to ensure that your responses are anonymous.');
+        })
+        function add_all_options(id){
+            $("#"+id).empty();
+            
+            var options = [];
+            if(id.includes("q1")){
+                options = ["Please select an option",
+                            "Software allows for minimum disclosure -- identifiers can be opened on an ‘as needed’ basis",
+                            "Software allows for tracking disclosures to enhance accountability",
+                            "Software is configurable to optimize safe data use per project",
+                            "Software allows for participants to feel good about the use of their data in a safe manner while still having confidence in the quality of the results.",
+                            "Software allows for better accuracy in the record linkage process and the study results",
+                            "Software allows for comprehensive privacy protection that is not available now"];
+            } else if(id.includes("q2")){
+                options =["Please select an option",
+                            "Still potential for some information disclosure which may lead to false sense of protection",
+                            "Still potential for misuse of information by authorized users (e.g. negligence, not sufficient training)",
+                            "Still potential for hacking (i.e., misuse of information by unauthorized users)",
+                            "Still requires checks and balances beyond the software to ensure protection (e.g., accountability for software configuration, checking for secure system setup)",
+                            "Still potential for errors in the linkage process"]
+            } else {
+                options = ["Please select an option",
+                            "Why are identifiers needed for this research?",
+                            "What other information, besides personal identifiers, are used during linkage?",
+                            "Who is the data custodian of the linked data (i.e., who has control of the data), where is the linkage taking place (i.e. which organization) and who will be doing it?",
+                            "What accountability mechanisms (e.g., background checks, training, protocols) exist for persons involved in the research?",
+                            "What infrastructure is in place to safeguard the data?",
+                            "What is the purpose and scope of the study, including how the data will be used after the linkage?",
+                            "Will the linked data be used for other purposes?",
+                            "How will the results disseminated?",
+                            "What is the protocol in the case of misuse?",
+                            "Has the software been used before for research and has it enhanced protection as well as improve research quality?",
+                            "Where can I get more information?"]
+            }
+            // var options = ["Please select an option", "A", "B", "C", "D", "E"]
+            
+            // if(id.includes("q1")){
+            //     options.push("F");
+            // }
+            for(i = 0; i < options.length; i++){
+                var opt = document.createElement('option');
+                opt.value = options[i];
+                opt.innerHTML = options[i];
+                $("#"+id).append(opt);
+            };
+        };
+        function modify_options(id, exclude){
+            $("#"+id).empty();
+            
+           var options = [];
+            if(id.includes("q1")){
+                options = ["Please select an option",
+                            "Software allows for minimum disclosure -- identifiers can be opened on an ‘as needed’ basis",
+                            "Software allows for tracking disclosures to enhance accountability",
+                            "Software is configurable to optimize safe data use per project",
+                            "Software allows for participants to feel good about the use of their data in a safe manner while still having confidence in the quality of the results.",
+                            "Software allows for better accuracy in the record linkage process and the study results",
+                            "Software allows for comprehensive privacy protection that is not available now"];
+            } else if(id.includes("q2")){
+                options =["Please select an option",
+                            "Still potential for some information disclosure which may lead to false sense of protection",
+                            "Still potential for misuse of information by authorized users (e.g. negligence, not sufficient training)",
+                            "Still potential for hacking (i.e., misuse of information by unauthorized users)",
+                            "Still requires checks and balances beyond the software to ensure protection (e.g., accountability for software configuration, checking for secure system setup)",
+                            "Still potential for errors in the linkage process"]
+            } else {
+                options = ["Please select an option",
+                            "Why are identifiers needed for this research?",
+                            "What other information, besides personal identifiers, are used during linkage?",
+                            "Who is the data custodian of the linked data (i.e., who has control of the data), where is the linkage taking place (i.e. which organization) and who will be doing it?",
+                            "What accountability mechanisms (e.g., background checks, training, protocols) exist for persons involved in the research?",
+                            "What infrastructure is in place to safeguard the data?",
+                            "What is the purpose and scope of the study, including how the data will be used after the linkage?",
+                            "Will the linked data be used for other purposes?",
+                            "How will the results disseminated?",
+                            "What is the protocol in the case of misuse?",
+                            "Has the software been used before for research and has it enhanced protection as well as improve research quality?",
+                            "Where can I get more information?"]
+            }
+            for(i = 0; i < options.length; i++){
+                if(exclude.indexOf(options[i]) < 0){
+                    var opt = document.createElement('option');
+                    opt.value = options[i];
+                    opt.innerHTML = options[i];
+                    $("#"+id).append(opt);
+                }
+            };
+        };
+        function reset_question(q){
+            var question_n_ranks = $(".q"+q);
+            question_n_ranks.each(function(){
+                var id = $(this).attr("id");
+                add_all_options(id);
+            });
+        }
+        for(q=1; q<=3; q++){
+            reset_question(q);
+        }
+        // modify_options("q1_r1", [1,2]);
+// :input
+         $("select").change(function(){
+            var question_rank_element = $(this);
+            var question_rank_id = question_rank_element.attr("id");
+            var question_rank_value = $(this).val();
+            var question_id = question_rank_id.split("_")[0];
+            var question_number = question_id.split("")[1];
+            // console.log(question_rank_element, question_rank_id, question_rank_value, question_id, question_number);
+            var question_n_ranks = $(".q"+question_number);
+            // console.log(question_n_ranks);
+            var selected_options = [];
+            // var selected_options_other = [];
+            question_n_ranks.each(function(){
+                var val = $(this).val();
+                if(val != "Please select an option"){
+                    selected_options.push(val);
+                    // if($(this).attr("id") != question_rank_id){
+                    //     selected_options_other.push(parseInt(val));
+                    // }
+                }
+            });
+            // console.log("selected options: ", selected_options);
+            // console.log(selected_options_other);
+            // console.log(question_rank_value);
+            // console.log(selected_options_other.indexOf(question_rank_value));
+            // if(selected_options_other.indexOf(parseInt(question_rank_value)) >= 0){
+            //     alert("You have already selected this option.");
+            // }
+            question_n_ranks.each(function(){
+                i_question_rank_id = $(this).attr("id");
+                i_question_rank_value = $(this).val();
+                if(question_rank_id != i_question_rank_id & i_question_rank_value == "Please select an option"){
+                    console.log("new");
+                    console.log(selected_options);
+                    modify_options(i_question_rank_id, selected_options);
+                }
+                if(question_rank_id != i_question_rank_id & i_question_rank_value != "Please select an option"){
+                    // selected_options_cp = selected_options;
+                    var selected_options_cp = JSON.parse(JSON.stringify(selected_options));
+                    // var selected_options_cp = jQuery.extend(true, {}, selected_options);
+                    selected_options_cp.splice(selected_options_cp.indexOf(i_question_rank_value),1);
+                    // console.log("already");
+                    // console.log(selected_options_cp);
+                    modify_options(i_question_rank_id, selected_options_cp);
+                    $(this).val(i_question_rank_value);
+                };
+            });
+         })
+         function end_RL() {
+             alert("Thank You!\n You may now close your browser or try again.");
+         }
+         function validateEmail(email) {
+             var re = /^(([^<>()\[\]\\.,;:\s@"]+(\.[^<>()\[\]\\.,;:\s@"]+)*)|(".+"))@((\[[0-9]{1,3}\.[0-9]{1,3}\.[0-9]{1,3}\.[0-9]{1,3}\])|(([a-zA-Z\-0-9]+\.)+[a-zA-Z]{2,}))$/;
+             return re.test(String(email).toLowerCase());
+         }
+         function validate(){
+            // alert("validating....")
+            var ret = [];
+            for(i=1;i<=5;i++){
+                // console.log(i);
+                if(i<=3){
+                    var question_n_ranks = $(".q"+i);
+                    console.log(question_n_ranks);
+                    question_n_ranks.each(function(){
+                        var val = $(this).val();
+                        if(val.includes("Please select")){
+                            ret.push("Please complete question " + i);
+                            
+                        };
+                     });
+                } else if(i == 5){
+                    // console.log($("#email").text());
+                    // console.log($("#email").val());
+                    if(!validateEmail($("#email").val())){
+                        ret.push("Use a valid email");
+                    };
+                } else if(i == 4){
+                    var qs = ['a','b','c','d','e','f','g','h','i','j','k'];
+                    for(q=0; q<qs.length;q++){
+                        rbn = "q4_"+qs[q];
+                        val = $('input[name='+rbn+']:checked').val();
+                        // console.log('input[name=q4_a]:checked').val());
+                        if (typeof val == 'undefined'){
+                            ret.push("Please complete question 4");
+                        }
+                    };  
+                };
+            
+        };
+        ret = ret.filter(function(item, i, ar){ return ar.indexOf(item) === i; });
+        console.log(ret);
+        if(ret.length == 0){
+            return true;
+        } else{
+            alert(ret.join("\n"));
+            return false;
+        }
+    };
+    </script>
+
+</html>

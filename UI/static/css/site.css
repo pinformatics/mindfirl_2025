@@ -1,0 +1,87 @@
+/*
+    stylesheet for the entire site.
+*/
+
+html {
+    font-size: 18px;
+}
+
+html {
+  height: 100%;
+  box-sizing: border-box;
+}
+
+*,
+*:before,
+*:after {
+  box-sizing: inherit;
+}
+
+body {
+  position: relative;
+  margin: 0;
+  padding-bottom: 6rem;
+  min-height: 100%;
+}
+
+
+#title h3 {
+    font-size: 36px;
+    margin-bottom: 0px;
+}
+
+#page-number {
+  /*
+  width: 100px;
+  float: right;
+  margin-right: 50px;
+  */
+  width: 100%;
+  text-align: center;
+}
+
+.submit_button {
+    background-color: #30819C;
+    border: none;
+    color: white;
+    padding: 15px 32px;
+    text-align: center;
+    text-decoration: none;
+    display: inline-block;
+    font-size: 16px;
+    cursor: pointer;
+}
+
+button:disabled {
+    background-color: #b3b3b3;
+    border: none;
+    color: white;
+    padding: 15px 32px;
+    text-align: center;
+    text-decoration: none;
+    display: inline-block;
+    font-size: 16px;
+    cursor: not-allowed;
+}
+
+.tooltiptext1 {
+    visibility: hidden;
+    width: 100px;
+    background-color: #ADD8E6;
+    color: #000;
+    text-align: center;
+    border-radius: 3px;
+    padding: 0 2px 0 2px;
+    font-size: 14px;
+
+    /* Position the tooltip */
+    position: absolute;
+    z-index: 1;
+    margin-left: -60px;
+    margin-top: -15px;
+}
+
+.tooltip1:hover .tooltiptext1 {
+    visibility: visible;
+}
+
