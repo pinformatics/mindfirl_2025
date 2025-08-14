@@ -19,8 +19,7 @@ Our code will save the uncertain pairs (that need manual review) as a CSV file. 
 
 ### Interactive Demonstration
 Our code includes a UI folder which includes the code for our interactive demonstration website. This allows a user to review pairs of records and assess for themselves if they think the two records correspond to the same person. This emulates the role of a reviewer. The interactive demonstration can be found at: \
-https://mindfirl-mobile-eec6dshehwevazbd.centralus-01.azurewebsites.net/ \
-or \
+https://mindfirl-mobile-eec6dshehwevazbd.centralus-01.azurewebsites.net/ or \
 https://tinyurl.com/ireclinkage-mobile. 
 
 A tutorial how to use the website can be found at the following slide deck: 
