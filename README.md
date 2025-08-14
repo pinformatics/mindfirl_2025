@@ -18,9 +18,9 @@ You can use our trained models to conduct record linkage on your data or train a
 Our code will save the uncertain pairs (that need manual review) as a CSV file. Each pair will be reviewed by two reviewer individually. If there is any disagreement, means one reviewer believes the pair is match and the other believes it is unmatch, two other reviewer will review that pair. If there is still disagreement, the four of them will have an open discussion meeting to resolve the pair. 
 
 ### Interactive Demonstration
-Our code includes a UI folder which includes the code for our interactive demonstration website. This allows a user to review pairs of records and assess for themselves if they think the two records correspond to the same person. This emulates the role of a reviewer. The interactive demonstration can be found at:
-https://mindfirl-mobile-eec6dshehwevazbd.centralus-01.azurewebsites.net/ 
-or 
+Our code includes a UI folder which includes the code for our interactive demonstration website. This allows a user to review pairs of records and assess for themselves if they think the two records correspond to the same person. This emulates the role of a reviewer. The interactive demonstration can be found at: \
+https://mindfirl-mobile-eec6dshehwevazbd.centralus-01.azurewebsites.net/ \
+or \
 https://tinyurl.com/ireclinkage-mobile. 
 
 A tutorial how to use the website can be found at the following slide deck: 
