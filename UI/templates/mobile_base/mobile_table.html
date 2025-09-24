@@ -1,0 +1,111 @@
+<div style="display: flex; flex-direction: row; width: 80vw; margin-left: 8vw;">
+    <div style="display: flex; flex-direction: column; justify-content: flex-start; max-width: 66vw;">  
+        <table id="mobile-table">
+            <tbody>
+            <tr>
+                <th class="mobile-header">ID</th>
+                {% for r in data %}
+                <td>
+                    <div class="table-wrapper table_row_even">
+                        <div id="{{ ids[loop.index0][0][0] }}">{{ r[0][1]|safe }}</div>
+                        <!-- {{ icons[loop.index0][0]|safe }} -->
+                        <div id="{{ ids[loop.index0][1][0] }}">{{ r[1][1]|safe }}</div>
+                    </div>
+                </td>
+                {% endfor %}
+            </tr>
+            <tr>
+                <th class="mobile-header">FFreq</th>
+                {% for r in data %}
+                <td>
+                    <div class="table-wrapper table_row_odd">
+                        <div class="tooltip1">{{ r[0][2]|safe }}</div>
+                        <div class="tooltip1">{{ r[1][2]|safe }}</div>
+                    </div>
+                </td>
+                {% endfor %}
+            </tr>
+            <tr>
+                <th class="mobile-header">First Name</th>
+                {% for r in data %}
+                <td>
+                    <div class="table-wrapper table_row_even">
+                        <div id="{{ ids[loop.index0][0][1] }}">{{ r[0][3]|safe }}</div>
+                        <!-- {{ icons[loop.index0][1]|safe }} -->
+                        <div id="{{ ids[loop.index0][1][1] }}">{{ r[1][3]|safe }}</div>
+                    </div>
+                </td>
+                {% endfor %}
+            </tr>
+            <tr>
+                <th class="mobile-header">Last Name</th>
+                {% for r in data %}
+                <td>
+                    <div class="table-wrapper table_row_odd">
+                        <div id="{{ ids[loop.index0][0][2] }}">{{ r[0][4]|safe }}</div>
+                        <!-- {{ icons[loop.index0][3]|safe }} -->
+                        <div id="{{ ids[loop.index0][1][2] }}">{{ r[1][4]|safe }}</div>
+                    </div>
+                </td>
+                {% endfor %}
+            </tr>
+            <tr>
+                <th class="mobile-header">LFreq</th>
+                {% for r in data %}
+                <td>
+                    <div class="table-wrapper table_row_even">
+                        <div class="tooltip1">{{ r[0][5]|safe }}</div>
+                        <div class="tooltip1">{{ r[1][5]|safe }}</div>
+                    </div>
+                </td>
+                {% endfor %}
+            </tr>
+            <tr>
+                <th class="mobile-header">DoB (M/D/Y)</th>
+                {% for r in data %}
+                <td>
+                    <div class="table-wrapper table_row_odd">
+                        <div id="{{ ids[loop.index0][0][3] }}">{{ r[0][6]|safe }}</div>
+                        {{ icons[loop.index0][4]|safe }}
+                        <div id="{{ ids[loop.index0][1][3] }}">{{ r[1][6]|safe }}</div>
+                    </div>
+                </td>
+                {% endfor %}
+            </tr>
+            <tr>
+                <th class="mobile-header">Sex</th>
+                {% for r in data %}
+                <td>
+                    <div class="table-wrapper table_row_even">
+                        <div id="{{ ids[loop.index0][0][4] }}">{{ r[0][7]|safe }}</div>
+                        {{ icons[loop.index0][5]|safe }}
+                        <div id="{{ ids[loop.index0][1][4] }}">{{ r[1][7]|safe }}</div>
+                    </div>
+                </td>
+                {% endfor %}
+            </tr>
+            <tr>
+                <th class="mobile-header">Race</th>
+                {% for r in data %}
+                <td>
+                    <div class="table-wrapper table_row_odd">
+                        <div id="{{ ids[loop.index0][0][5] }}">{{ r[0][8]|safe }}</div>
+                        {{ icons[loop.index0][6]|safe }}
+                        <div id="{{ ids[loop.index0][1][5] }}">{{ r[1][8]|safe }}</div>
+                    </div>
+                </td>
+                {% endfor %}
+            </tr>
+            <tr>
+                <th></th>
+                {% for r in data %}
+                {% set loop_index0 = loop.index0 %}
+                <td>
+                    {% include "choice_panel.html" %}
+                </td>
+                {% endfor %}
+            </tr>
+            </tbody>
+        </table>
+    </div>
+</div>

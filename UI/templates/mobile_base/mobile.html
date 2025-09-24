@@ -1,0 +1,200 @@
+
+
+
+<!DOCTYPE html>
+<html lang="en">
+    <head>
+        <meta charset="utf-8">
+        <title>IRL</title>
+        <link rel="stylesheet" href="{{ url_for('static', filename='css/style.css') }}?v=9999" type="text/css">
+        <link rel="stylesheet" href="{{ url_for('static', filename='css/select_mobile.css') }}?v=9999" type="text/css">
+        <link rel="stylesheet" href="{{ url_for('static', filename='css/results.css') }}" type="text/css">
+        <link rel="stylesheet" href="{{ url_for('static', filename='css/ionicons.min.css')}}" type="text/css">
+        <link rel="stylesheet" href="{{ url_for('static', filename='css/bootstrap.min.css') }}" type="text/css">
+        <link href="https://code.ionicframework.com/ionicons/2.0.1/css/ionicons.min.css" rel="stylesheet">
+
+    </head>
+
+    <body id="mobile-wrapper">
+        <div style="display: flex; justify-content: flex-start; margin-top: 3vh; width: 100vw;">
+            <div>
+                <img src="{{ url_for('static', filename='images/site/population_informatics_icon_small.png')}}">
+            </div>
+            <div id="title">
+                <h2>{{ title }}<span id="title-suffix"></span></h2>
+            </div>
+            <div style="margin: 10px;">
+                <a href="{{ url_for('index') }}">
+                    <button class="landing-button">
+                        Home
+                    </button>
+                </a>
+            </div>
+        </div>
+        <div style="margin-bottom: 8vh; margin-top: 3vh;">
+            {% include "mobile_base/mobile_table.html" %}
+        </div>
+        <br />
+        <br />
+
+<!-- <div style="clear:both"></div> -->
+    <div id="content" style="display: flex; flex-wrap: wrap; justify-content: space-between; 
+    align-items: flex-start; padding: 20px; width: 70vw; max-width: 80vw; min-height: 20vh; margin-left: 12vw;">
+        <div style="flex-basis: 55%; margin-right: 1%; margin-top: 0.4em; font-size:1.5em">
+            <ul>
+                <li>Note: To see all features, please use Google Chrome or Safari browser.</li>
+                <li>View the tutorial below:
+                    <ul>
+                        <li><a href="https://docs.google.com/presentation/d/1xxrhMMI_aJCX8FXzh3PIUXlhPSeDvDKS/edit?slide=id.g35f3427c0fe_0_6#slide=id.g35f3427c0fe_0_6" target="_blank">Click to see a short instructional tutorial</a></li>
+                    </ul>
+                </li>
+                <li>The Results table shows the selections everyone has made about the likelihood of the pair of records referring to the same person.</li>
+            </ul>
+        </div>
+
+        <div id="legend" style="flex-basis: 40%; flex-direction: column; align-items: center; width: 20%; background-color: transparent; margin: 0; padding: 0;">
+            <h3 style="font-size: 1.5em; width: 100%; text-align: left;"><strong>Legend</strong></h3>
+            <div style="display: flex; width: 60%; max-width: 800px; padding: 0; gap: 2.1rem;">
+                <div class="legend-section" style="flex: 1; padding: 0;">
+                    <h4 style="padding: 0; margin: 0; white-space: nowrap; font-size: 1.4em; margin-bottom: 4px;"><strong>Highlight discrepancies</strong></h4> 
+                    <ul style="padding: 0; margin: 0; white-space: nowrap; font-size: 1.4rem;">
+                        <li><img src="{{ url_for('static', filename='images/site/missing.png') }}" alt="Missing fields" style="width: 20px; height: 20px;"> Missing fields</li>
+                        <li><img src="{{ url_for('static', filename='images/site/replace.png') }}" alt="Different characters" style="width: 20px; height: 20px;"> Different characters</li>
+                        <li><img src="{{ url_for('static', filename='images/site/indel.png') }}" alt="Extra characters" style="width: 20px; height: 20px;"> Extra characters</li>
+                    <!-- </ul>
+                </div>
+                <div class="legend-section" style="flex: 1; padding: 0;">
+                    <ul style="padding: 0; margin-top: 0.9em; white-space: nowrap;"> -->
+                        <li><img src="{{ url_for('static', filename='images/site/transpose.png') }}" alt="Transposed characters" style="width: 20px; height: 20px;"> Transposed characters</li>
+                        <li><img src="{{ url_for('static', filename='images/site/name_swap.png') }}" alt="Name/date swaps" style="width: 20px; height: 20px;"> Name/date swaps</li>
+                        <li><img src="{{ url_for('static', filename='images/site/diff.png') }}" alt="Major field differences" style="width: 20px; height: 20px;"> Major field differences</li>
+                    </ul>
+                </div>
+            </div>
+        </div>
+    </div>
+        <div id="footer_filler"></div>
+            <div style="margin-top: 4vh;">
+                <h5 style="font-weight: 200;">If you have any questions, comments, or concerns, you can email jonathonlowe@tamu.edu</h4>
+            </div>
+        <footer class="footer">
+            <div class="footer-container">
+                <span class="text-muted">Copyright © 2017 • Population Informatics Lab • Texas A&M University</span>
+            </div>
+        </footer>
+        <!-- JS goes at the bottom for performance -->
+        <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
+        <script>
+document.addEventListener("DOMContentLoaded", function () {
+    paginateMobileTable();
+});
+
+function paginateMobileTable() {
+    const table = document.getElementById("mobile-table");
+    const rows = Array.from(table.rows);
+    const colsPerPage = 1;
+    let currentPage = 0;
+
+    let next, submitButton;
+
+    function updatePairCounter(rows, currentPage, colsPerPage) {
+        const pairCounter = document.getElementById("pair-counter");
+        const pairCounterClone = document.getElementById("pair-counter-clone");
+        if (!pairCounter) return;
+
+        const totalCols = rows[0]?.cells.length - 1 || 0;
+        const totalPages = Math.ceil(totalCols / colsPerPage);
+        pairCounter.textContent = `${currentPage + 1} / ${totalPages}`;
+        pairCounterClone.textContent = `(Pair ${currentPage + 1} / ${totalPages})`;
+    }
+
+
+    function renderPage() {
+        rows.forEach(row => {
+            Array.from(row.cells).forEach((cell, i) => {
+                // Skip the first column (static row headers)
+                if (i === 0) return;
+
+                const shouldShow =
+                    i >= currentPage * colsPerPage + 1 &&
+                    i < (currentPage + 1) * colsPerPage + 1;
+
+                cell.style.display = shouldShow ? "table-cell" : "none";
+            });
+        });
+
+        const totalCols = rows[0]?.cells.length - 1 || 0;
+        const isLastPage = (currentPage + 1) * colsPerPage >= totalCols;
+
+        // Toggle button visibility
+        if (next && submitButton) {
+            next.style.display = isLastPage ? "none" : "inline-block";
+            submitButton.style.display = isLastPage ? "inline-block" : "none";
+        }
+
+        updatePairCounter(rows, currentPage, colsPerPage);
+    }
+
+    function addControls() {
+        const nav = document.createElement("div");
+        nav.id = "column-pagination-controls";
+
+        submitButton = document.createElement("button");
+        submitButton.textContent = "Submit";
+        submitButton.classList.add("submit-button");
+        submitButton.style.display = "none"; // hidden initially
+
+        prev = document.createElement("button");
+        prev.textContent = "Prev";
+        prev.onclick = () => {
+            if (currentPage > 0) {
+                currentPage--;
+                renderPage();
+                submitButton.disabled = true; // ⬅️ Disable submit when moving back
+            }
+        };
+
+        next = document.createElement("button");
+        next.textContent = "Next";
+        next.onclick = () => {
+            const totalCols = rows[0]?.cells.length - 1 || 0;
+            if ((currentPage + 1) * colsPerPage < totalCols) {
+                currentPage++;
+                renderPage();
+            }
+
+            if ((currentPage + 1) * colsPerPage === totalCols) {
+                submitButton.disabled = false; // ⬅️ Enable submit on last page
+            }
+        };
+
+        // ✅ Create the span to show "Pair X / Y"
+        const pairSpan = document.createElement("span");
+        pairSpan.id = "pair-counter";
+        pairSpan.style.margin = "0 10px";
+        pairSpan.style.fontWeight = "bold";
+
+        const pairSpanClone = pairSpan.cloneNode(true);
+        const titleSuffix = document.getElementById("title-suffix");
+        pairSpanClone.id = "pair-counter-clone";
+        titleSuffix.append(pairSpanClone);
+
+        nav.appendChild(prev);
+        nav.appendChild(pairSpan)
+        nav.appendChild(next);
+        nav.appendChild(submitButton);
+        table.parentElement.appendChild(nav);
+
+        updatePairCounter(rows, currentPage, colsPerPage);
+    }
+
+    renderPage();
+    addControls();
+}
+</script>
+
+        <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
+        <script src="{{ url_for('static', filename='javascript/choice_panel.js') }}"></script>
+    </body>
+    
+</html>
