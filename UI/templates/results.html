@@ -1,0 +1,22 @@
+<div class="results-wrapper">
+    <div class="results-div">       
+        <div class="results-header">
+            Results
+        </div>
+
+        <div>
+                {% for r in data %}
+                    {% if loop.index is divisibleby 2 %}
+                <div class="results_row results_row_even">
+                    {% else %}
+                <div class="results_row results_row_odd">
+                    {% endif %}
+                    <div>
+                        {{ results_selections[loop.index0] | safe }}
+                    </div>
+                </div>
+                {% endfor %}
+        </div>
+
+    </div>
+</div>

@@ -1,0 +1,36 @@
+
+<!-- <div style="clear:both"></div> -->
+<div id="content" style="display: flex; flex-wrap: wrap; justify-content: space-between; align-items: flex-start; padding: 20px;">
+    <div style="flex-basis: 55%; min-width: 300px; margin-right: 1%; margin-top: 0.4em; font-size:1.1em">
+        <ul>
+            <li>Note: To see all features, please use Google Chrome or Safari browser.</li>
+            <li>View the tutorial below:
+                <ul>
+                    <li><a href="https://docs.google.com/presentation/d/1xxrhMMI_aJCX8FXzh3PIUXlhPSeDvDKS/edit?slide=id.g35f3427c0fe_0_6#slide=id.g35f3427c0fe_0_6" target="_blank">Click to see a short instructional tutorial</a></li>
+                </ul>
+            </li>
+            <li>The Results table shows the selections everyone has made about the likelihood of the pair of records referring to the same person.</li>
+        </ul>
+    </div>
+
+    <div id="legend" style="flex-basis: 40%; flex-direction: column; align-items: center; width: 20%; background-color: transparent; margin: 0; padding: 0;">
+        <h3 style="font-size: 1.5em; width: 100%; text-align: left;"><strong>Legend</strong></h3>
+        <div style="display: flex; width: 60%; max-width: 800px;  min-width:400px; padding: 0; gap: 1.5rem;">
+            <div class="legend-section" style="flex: 1; padding: 0;">
+                <h4 style="padding: 0; margin: 0; white-space: nowrap; font-size: 0.9em;"><strong>Highlight discrepancies</strong></h4> 
+                <ul style="padding: 0; margin: 0; white-space: nowrap">
+                    <li><img src="{{ url_for('static', filename='images/site/missing.png') }}" alt="Missing fields" style="width: 20px; height: 20px;"> Missing fields</li>
+                    <li><img src="{{ url_for('static', filename='images/site/replace.png') }}" alt="Different characters" style="width: 20px; height: 20px;"> Different characters</li>
+                    <li><img src="{{ url_for('static', filename='images/site/indel.png') }}" alt="Extra characters" style="width: 20px; height: 20px;"> Extra characters</li>
+                </ul>
+            </div>
+            <div class="legend-section" style="flex: 1; padding: 0;">
+                <ul style="padding: 0; margin-top: 0.9em; white-space: nowrap;">
+                    <li><img src="{{ url_for('static', filename='images/site/transpose.png') }}" alt="Transposed characters" style="width: 20px; height: 20px;"> Transposed characters</li>
+                    <li><img src="{{ url_for('static', filename='images/site/name_swap.png') }}" alt="Name/date swaps" style="width: 20px; height: 20px;"> Name/date swaps</li>
+                    <li><img src="{{ url_for('static', filename='images/site/diff.png') }}" alt="Major field differences" style="width: 20px; height: 20px;"> Major field differences</li>
+                </ul>
+            </div>
+        </div>
+    </div>
+</div>

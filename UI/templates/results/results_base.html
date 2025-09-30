@@ -1,0 +1,46 @@
+<!DOCTYPE html>
+<html lang="en">
+    <head>
+        <meta charset="utf-8">
+        <title>IRL</title>
+        <link rel="stylesheet" href="{{ url_for('static', filename='css/style.css') }}?v=9999" type="text/css">
+        <link rel="stylesheet" href="{{ url_for('static', filename='css/results.css') }}" type="text/css">
+        <link rel="stylesheet" href="{{ url_for('static', filename='css/ionicons.min.css')}}" type="text/css">
+        <link rel="stylesheet" href="{{ url_for('static', filename='css/bootstrap.min.css') }}" type="text/css">
+    </head>
+
+    <body id="wrapper">
+        <div style="display: flex">
+            <div>
+                <img src="{{ url_for('static', filename='images/site/population_informatics_icon.png') }}" style="width: 200px">
+            </div>
+            <div id="title">
+                <h3>{{ title }}</h3>
+            </div>
+            <a href="{{ url_for('index') }}">
+                <button class="landing-button">
+                    Home
+                </button>
+            </a>
+        </div>
+    </body>   
+    <body id="wrapper">
+        {% include "results/results_header.html" %}
+    </body>
+    <body>
+        <div id="flex-row-wrapper">
+            {% include "results/results_table.html" %}
+            {% include "results.html" %}
+        </div>
+    </body>
+    <br />
+    <br />
+    <body>
+        <div id="footer_filler"></div>
+        <footer class="footer">
+            <div class="container">
+                <span class="text-muted">Copyright © 2017 • Population Informatics Lab • Texas A&M University</span>
+            </div>
+        </footer>
+    </body>
+</html>

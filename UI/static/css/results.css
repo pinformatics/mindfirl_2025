@@ -1,0 +1,42 @@
+.results-wrapper {
+    width: 24vw;
+    justify-content: center;
+}
+
+.results-div {
+    width: 20vw;
+}
+
+.results-header {
+    line-height: 24px;
+    overflow: hidden;
+    background-color: #ADD8E6;
+    font-style: normal;
+    font-variant: normal;
+    font-weight: bold;
+    font-stretch: normal;
+    font-size: 16px;
+    font-family: Monaco;
+    text-align: center;
+}
+
+.results_row {
+    height: 124px;
+    color: #333;
+    font-style: normal;
+    font-variant: normal;
+    font-stretch: normal;
+    font-size: 16px;
+    font-family: Consolas, monaco, monospace, Courier, Droid Sans Mono;
+    font-weight: bold;
+    text-align: center;
+    overflow: hidden;
+}
+
+.results_row_odd {
+    background-color: #FFFFFF;
+}
+
+.results_row_even {
+    background-color: #EAF2FF;
+}

@@ -1,0 +1,123 @@
+
+    <div id="table">
+        <div id="table_head">
+            <div class="table_col1">Pair</div>
+            <div class="table_col2">ID</div>
+            <div class="table_col3">FFreq</div>
+            <div class="table_col4 table_names">First Name</div>
+            <div class="table_col4_5 hidden_element">s</div>
+            <div class="table_col5 table_names">Last Name</div>
+            <div class="table_col6">LFreq</div>
+            <div class="table_col7">DoB(M/D/Y)</div>
+            <div class="table_col8">Sex</div>
+            <div class="table_col9">Race</div>
+            <!-- <div class="table_col10">Results</div> -->
+        </div>
+        <div>
+            {% for r in data %}
+                {% if loop.index is divisibleby 2 %}
+            <div class="table_row table_row_even">
+                {% else %}
+            <div class="table_row table_row_odd">
+                {% endif %}
+                <div class="table_col1 pair_number">{{ loop.index }}</div>
+                    <div class="table_col2 clickable_cell" id = "test_col" mode="masked">
+                    <div class="sub_row1" id="{{ ids[loop.index0][0][0] }}">
+                        {{ r[0][1]|safe }}
+                    </div>
+                    <div class="sub_row2">
+                        {{ icons[loop.index0][0]|safe }}
+                    </div>
+                    <div class="sub_row3" id="{{ ids[loop.index0][1][0] }}">
+                        {{ r[1][1]|safe }}
+                    </div>
+                </div>
+                <div class="table_col3">
+                    <div class="sub_row1 tooltip1">
+                        {{ r[0][2]|safe }}
+                    </div>
+                    <div class="sub_row2">
+                    </div>
+                    <div class="sub_row3  tooltip1">
+                        {{ r[1][2]|safe }}
+                    </div>
+                </div>
+                
+                <div class="{% if 'svg' in icons[loop.index0][2] %}names_big_cell clickable_big_cell{% endif %}">
+                <div class="table_col4 table_names {% if 'svg' not in icons[loop.index0][2] %}clickable_cell{% endif %}" mode="masked">
+                    <div class="sub_row1" id="{{ ids[loop.index0][0][1] }}">
+                        {{ r[0][3]|safe }}
+                    </div>
+                    <div class="sub_row2">
+                        {{ icons[loop.index0][1]|safe }}
+                    </div>
+                    <div class="sub_row3" id="{{ ids[loop.index0][1][1] }}">
+                        {{ r[1][3]|safe }}
+                    </div>
+                </div>
+                <div class="table_col4_5">
+                    {{ icons[loop.index0][2]|safe }}
+                </div>
+                <div class="table_col5 table_names {% if 'svg' not in icons[loop.index0][2] %}clickable_cell{% endif %}" mode="masked">
+                    <div class="sub_row1" id="{{ ids[loop.index0][0][2] }}">
+                        {{ r[0][4]|safe }}
+                    </div>
+                    <div class="sub_row2">
+                        {{ icons[loop.index0][3]|safe }}
+                    </div>
+                    <div class="sub_row3" id="{{ ids[loop.index0][1][2] }}">
+                        {{ r[1][4]|safe }}
+                    </div>
+                </div>
+                </div>
+                <div class="table_col6">
+                    <div class="sub_row1 tooltip1">
+                        {{ r[0][5]|safe }}
+                    </div>
+                    <div class="sub_row2">
+                    </div>
+                    <div class="sub_row3 tooltip1">
+                        {{ r[1][5]|safe }}
+                    </div>
+                </div>
+                <div class="table_col7 clickable_cell" mode="masked">
+                    <div class="sub_row1" id="{{ ids[loop.index0][0][3] }}">
+                        {{ r[0][6]|safe }}
+                    </div>
+                    <div class="sub_row2">
+                        {{ icons[loop.index0][4]|safe }}
+                    </div>
+                    <div class="sub_row3" id="{{ ids[loop.index0][1][3] }}">
+                        {{ r[1][6]|safe }}
+                    </div>
+                </div>
+                <div class="table_col8 clickable_cell" mode="masked">
+                    <div class="sub_row1" id="{{ ids[loop.index0][0][4] }}">
+                        {{ r[0][7]|safe }}
+                    </div>
+                    <div class="sub_row2">
+                        {{ icons[loop.index0][5]|safe }}
+                    </div>
+                    <div class="sub_row3" id="{{ ids[loop.index0][1][4] }}">
+                        {{ r[1][7]|safe }}
+                    </div>
+                </div>
+                <div class="table_col9 clickable_cell" mode="masked">
+                    <div class="sub_row1" id="{{ ids[loop.index0][0][5] }}">
+                        {{ r[0][8]|safe }}
+                    </div>
+                    <div class="sub_row2">
+                        {{ icons[loop.index0][6]|safe }}
+                    </div>
+                    <div class="sub_row3" id="{{ ids[loop.index0][1][5] }}">
+                        {{ r[1][8]|safe }}
+                    </div>
+                </div>
+                <div>
+                    {% include "choice_panel.html" %}
+                </div>
+            </div>
+            <div style="clear:both"></div>
+            {% endfor %}
+        </div>
+    </div>

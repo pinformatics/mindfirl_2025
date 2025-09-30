@@ -6,9 +6,7 @@
 */
 
 $(document).ready(function(){
-    var $options = $("li.input_radio");
-
-    $options.click(function(e){
+    $(document).on("click", "li.input_radio", function(e) {
         e.preventDefault();
         e.stopPropagation();
         $(this).parent().find("li.input_radio").removeClass("ion-android-radio-button-on");
@@ -27,12 +25,37 @@ $(document).ready(function(){
             $same.css("border-color", "#30819c");
         }
 
-        // save the user click data
-        $this_click = "user click: " + $selected_id;
-        var dt = new Date();
-        $click_time = "click time: " + dt.getHours() + "h" + dt.getMinutes() + "m" + dt.getSeconds() + "s";
-        $click_timestamp = "click timestamp: " + dt.getTime();
-        $data = [$this_click, $click_time, $click_timestamp].join()
-        $user_data += $data + ";";
-    })
+        fetch('/update_selection', {
+            method: 'POST',
+            headers: {'Content-Type': 'application/json'},
+            body: JSON.stringify({'id': $selected_id})
+
+        })
+        .then(response => {
+            if (!response.ok) {
+                throw new Error("fff");
+            }
+            return response.json();
+        })
+    });
+})
+
+
+$(document).ready(function() {
+    var $options = $(".submit-button");
+
+    $options.click(function(e) {
+        e.preventDefault()
+        fetch('/submit_selections', {
+            method: 'POST',
+            credentials: 'same-origin'
+        })
+        .then(response => {
+            alert("Thank you for participating! Your submissions have been recorded. " + 
+                "If you would like to change your submissions, you may do so and then resubmit anytime.")
+        })
+        .catch(error => {
+            // handle error here
+        });
+    });
 })

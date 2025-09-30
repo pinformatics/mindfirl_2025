@@ -1,0 +1,211 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="utf-8" />
+    <title>Choose View</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/style.css') }}?v=9999" type="text/css">
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/results.css') }}" type="text/css">
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/ionicons.min.css')}}" type="text/css">
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/bootstrap.min.css') }}" type="text/css">
+
+    <style>
+        :root{
+            --page-max-width: 1000px;
+            --gap: 1rem;
+            --card-bg: #fbfbfd;
+            --accent: #0b5394;
+            --muted: #666;
+            --radius: 12px;
+        }
+
+        html,body{
+            height: 100%;
+            margin: 0;
+            font-family: system-ui, -apple-system, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+            color: #222;
+            background: #f4f6f8;
+            -webkit-font-smoothing:antialiased;
+        }
+
+        /* Header */
+        header.site-header{
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            padding: 1.25rem 1rem;
+            background: white;
+            box-shadow: 0 1px 3px rgba(20,20,30,0.04);
+            position: relative;
+        }
+
+        .brand-left img{
+            height: auto;
+            display: block;
+        }
+
+        .site-title{
+            position: absolute;
+            left: 50%;
+            transform: translateX(-50%);
+            margin: 0;
+            text-align: center;
+            font-size: clamp(1.1rem, 4.2vw, 2.2rem);
+            font-weight: 600;
+            color: #1f2937;
+            pointer-events: none;
+        }
+
+        .home-btn button {
+            padding: 0.5rem 0.9rem;
+            border-radius: 8px;
+            border: 1px solid #e0e6ef;
+            background: white;
+            cursor: pointer;
+            font-size: 0.95rem;
+        }
+
+        main.container {
+            max-width: var(--page-max-width);
+            margin: 2rem auto;
+            padding: 0 1rem;
+            display: flex;
+            flex-direction: column;
+            gap: 1.5rem;
+        }
+
+        .row-card {
+            background: var(--card-bg);
+            border-radius: var(--radius);
+            padding: 2rem;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            gap: 1rem;
+            box-shadow: 0 6px 18px rgba(16,24,40,0.06);
+            border: 1px solid rgba(20,30,60,0.06);
+        }
+
+        .row-title {
+        flex: 0 0 50%;   /* lock to 40% of row width */
+        max-width: 50%;
+        text-align: left;
+        }
+
+        .row-title h2{
+            margin: 0;
+            font-size: clamp(1.2rem, 2.8vw, 1.6rem);
+            color: #0b5394;
+            line-height: 1.2;
+        }
+
+        .row-sub {
+            margin-top: 0.35rem;
+            font-size: 1rem;
+            color: var(--muted);
+        }
+
+        .row-actions {
+        flex: 1 1 60%;
+        display: flex;
+        gap: 1rem;
+        flex-wrap: wrap;
+        justify-content: flex-end;
+    }
+
+    .btn {
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        padding: 0.7rem 1rem;
+        border-radius: 10px;
+        border: none;
+        cursor: pointer;
+        font-size: clamp(0.9rem, 2.2vw, 1.05rem);
+        font-weight: 500;
+        background: var(--accent);
+        color: white;
+        transition: transform 120ms ease, box-shadow 120ms ease;
+        flex: 0 1 auto;      /* let button shrink/grow naturally */
+        max-width: 100%;     /* no overflow */
+    }
+
+    .btn:hover {
+        transform: translateY(-2px);
+        box-shadow: 0 6px 14px rgba(11,83,148,0.2);
+    }
+
+    .btn:focus {
+        outline: 3px solid rgba(11,83,148,0.3);
+        outline-offset: 2px;
+    }
+
+    /* Responsive stacking for narrow screens */
+    @media (max-width: 720px){
+        .row-card {
+            flex-direction: column;
+            text-align: center;
+        }
+        .row-title {
+            flex: 1 1 auto;
+            max-width: 100%;
+            text-align: center;
+        }
+        .row-actions {
+            justify-content: center;
+            width: 100%;
+        }
+        .btn {
+            flex: 1 1 100%;   /* buttons stretch full width on very small screens */
+        }
+    }
+    </style>
+</head>
+<body>
+
+<header class="site-header">
+    <div class="brand-left">
+        <img src="{{ url_for('static', filename='images/site/population_informatics_icon.png') }}" style="width: 200px" alt="Organization icon">
+    </div>
+    <h1 class="site-title">{{ title }}</h1>
+</header>
+
+<main class="container">
+    <!-- Row 1 -->
+    <section class="row-card">
+        <div class="row-title">
+            <h2>Privacy Preserving Interactive Record Linkage</h2>
+            <div class="row-sub">Demonstration of Minimum Necessary Disclosure for Interactive Record Linkage</div>
+        </div>
+        <div class="row-actions">
+            <a href="{{ url_for('privacy_desktop') }}" class="btn">Try MiNDFIRL</a>
+        </div>
+    </section>
+
+    <!-- Row 2 -->
+    <section class="row-card">
+        <div class="row-title">
+            <h2>What is Record Linkage?</h2>
+            <div class="row-sub">Demonstration of full-information Interactive Record Linkage</div>
+        </div>
+        <div class="row-actions">
+            <a href="{{ url_for('disclosing_desktop') }}" class="btn">Try it on Desktop</a>
+            <a href="{{ url_for('mobile') }}" class="btn">Try it on Mobile</a>
+        </div>
+    </section>
+
+    <!-- Admin row -->
+    <div class="row-card admin-row">
+        <div>
+            <div class="small-note">Admin access</div>
+            <form class="admin-form" action="{{ url_for('admin_page') }}" method="POST" autocomplete="off">
+                <input type="password" name="password" placeholder="Admin password" required>
+                <button type="submit" class="btn">Admin Page</button>
+            </form>
+        </div>
+    </div>
+</main>
+
+</body>
+</html>

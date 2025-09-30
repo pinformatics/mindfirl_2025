@@ -3,7 +3,6 @@
 
 import logging
 import data_display as dd
-from util import RET
 
 
 class DataPair(object):
@@ -164,7 +163,7 @@ class DataPair(object):
     def get_attribute_display(self, i, attribute_mode):
         if i < 0 or i >= 6:
             logging.error('Error: attribute index not in range.')
-            return RET(status=1, return_data='Error: attribute index not in range.')
+            raise Exception('Error: attribute index not in range.')
 
         ret = list()
         if attribute_mode == 'base':
@@ -206,6 +205,9 @@ class DataPair(object):
         return [self._data1_helpers[i], self._data2_helpers[i]]
 
     def get_next_display(self, attr_id, attr_mode):
+        if attr_id == None or attr_mode == None:
+            logging.error("get_next_display had a null parameter passed into it{}{}".format(attr_id, attr_mode))
+
         if attr_mode not in ['full', 'partial', 'masked', 'F', 'P', 'M']:
             logging.error('Error: unsupported attribute display mode.')
 
@@ -259,7 +261,7 @@ class DataPair(object):
             else:
                 value = self._data2_helpers[j]
         else:
-            logging.error('Error: unsupported display status.')
+            logging.error('Error: unsupported display status.{}'.format(display_status))
             return 0
 
         return self._get_character_disclosed_num(value)
@@ -313,7 +315,7 @@ class DataPairList(object):
                 logging.error('Error: inconsistent pair number.')
             self._data.append(DataPair(data_pairs[i], data_pairs[i+1]))
             pair_num = int(data_pairs[i][0])
-            location = i/2
+            location = i // 2
             self._id_hash[pair_num] = location
 
 
@@ -507,7 +509,7 @@ def cdp_delta(data_pair, display_status, current_cd_num, total_characters):
         data_pair.get_character_disclosed_num(2, i, next_display)
         cdp_pre = 100.0*current_cd_num/total_characters
         cdp_post = 100.0*((1.0*current_cd_num+cd_post-cd_pre)/total_characters)
-        cdp_increment = round(cdp_post - cdp_pre,3);
+        cdp_increment = round(cdp_post - cdp_pre,3)
         id = data_pair.get_ids()[0][i]
         delta.append((id, cdp_increment))
     return delta
