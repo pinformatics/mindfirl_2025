@@ -1,0 +1,36 @@
+*/.vscode/
+
+*/.env
+
+# Python
+*/__pycache__/
+*.py[cod]
+*$py.class
+*.so
+.Python
+
+# Virtual environments
+resultsEnv/
+env/
+venv/
+*/.venv/
+ENV/
+env.bak/
+venv.bak/
+
+# R
+.Rproj.user/
+.Rhistory
+.RData
+.Ruserdata
+
+# Model files (large binaries)
+models/
+n2v_models/
+*.h5
+*.rds
+*.model
+
+# OS
+.DS_Store
+Thumbs.db
