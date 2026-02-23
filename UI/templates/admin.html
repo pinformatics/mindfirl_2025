@@ -1,34 +1,81 @@
 <!DOCTYPE html>
-<html>
+<html lang="en">
 <head>
-    <title>Download Redis CSV</title>
+    <meta charset="utf-8" />
+    <title>Admin Tools</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/style.css') }}?v=9999" type="text/css">
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/results.css') }}" type="text/css">
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/ionicons.min.css')}}" type="text/css">
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/bootstrap.min.css') }}" type="text/css">
+
+    <style>
+        body {
+            background-color: #f8f9fa;
+        }
+
+        .admin-action-btn {
+            min-width: 170px;
+        }
+    </style>
 </head>
 <body>
-    <div style="display: flex; justify-content: flex-start; margin-top: 3vh; width: 100vw;">
-        <div style="margin: 10px;">
-            <a href="{{ url_for('index') }}">
-                <button class="landing-button">
-                    Home
-                </button>
-            </a>
+
+{% set header_title = 'Admin Tools' %}
+{% set header_show_back = true %}
+{% set header_show_home = true %}
+{% include 'shared/nav_bar.html' %}
+
+<main class="container py-4" style="max-width: 980px;">
+    <div class="card shadow-sm mb-3">
+        <div class="card-body d-flex flex-column flex-md-row justify-content-between align-items-md-center gap-3">
+            <div>
+                <h2 class="h5 mb-1 text-primary">Results Dashboard</h2>
+                <p class="mb-0 text-muted">View interactive record linkage result summaries.</p>
+            </div>
+            <form action="{{ url_for('results_template') }}" method="get" class="mb-0">
+                <button class="btn btn-primary admin-action-btn" type="submit">See Results</button>
+            </form>
         </div>
     </div>
-    <h1>Admin Tools</h1>
-    <p>Click below to view the results.</p>
-    <form action="{{ url_for('results_template') }}" method="get">
-        <button type="submit">See Results</button>
-    </form>
-    <p>Click below to download the Redis data.</p>
-    <form action="{{ url_for('generate_redis_csv') }}" method="post">
-        <button type="submit">Download CSV</button>
-    </form>
-    <p>Click below to clear the Redis data. This is irreversible!</p>
-    <form action="{{ url_for('clear_redis') }}" method="post">
-        <button type="submit">Clear Redis Data</button>
-    </form>
-    <p>Click below to view the raw Redis data.</p>
-    <form action="{{ url_for('view_all_redis_data') }}" method="get">
-        <button type="submit">View Redis Data</button>
-    </form>
+
+    <div class="card shadow-sm mb-3">
+        <div class="card-body d-flex flex-column flex-md-row justify-content-between align-items-md-center gap-3">
+            <div>
+                <h2 class="h5 mb-1 text-primary">Export Responses</h2>
+                <p class="mb-0 text-muted">Download response and disclosure data as CSV.</p>
+            </div>
+            <form action="{{ url_for('generate_redis_csv') }}" method="post" class="mb-0">
+                <button class="btn btn-primary admin-action-btn" type="submit">Download CSV</button>
+            </form>
+        </div>
+    </div>
+
+    <div class="card shadow-sm mb-3 border-danger">
+        <div class="card-body d-flex flex-column flex-md-row justify-content-between align-items-md-center gap-3">
+            <div>
+                <h2 class="h5 mb-1 text-danger">Clear Redis Data</h2>
+                <p class="mb-0 text-muted">This is irreversible. All stored response data will be deleted.</p>
+            </div>
+            <form action="{{ url_for('clear_redis') }}" method="post" class="mb-0" onsubmit="return confirm('Are you sure you want to clear all Redis data? This action cannot be undone.');">
+                <button class="btn btn-danger admin-action-btn" type="submit">Clear Redis Data</button>
+            </form>
+        </div>
+    </div>
+
+    <div class="card shadow-sm">
+        <div class="card-body d-flex flex-column flex-md-row justify-content-between align-items-md-center gap-3">
+            <div>
+                <h2 class="h5 mb-1 text-primary">View Raw Redis Data</h2>
+                <p class="mb-0 text-muted">Inspect key/value data currently stored in Redis.</p>
+            </div>
+            <form action="{{ url_for('view_all_redis_data') }}" method="get" class="mb-0">
+                <button class="btn btn-primary admin-action-btn" type="submit">View Redis Data</button>
+            </form>
+        </div>
+    </div>
+</main>
+
 </body>
 </html>

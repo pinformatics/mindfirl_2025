@@ -16,21 +16,10 @@
     </head>
 
     <body id="mobile-wrapper">
-        <div style="display: flex; justify-content: flex-start; margin-top: 3vh; width: 100vw;">
-            <div>
-                <img src="{{ url_for('static', filename='images/site/population_informatics_icon_small.png')}}">
-            </div>
-            <div id="title">
-                <h2>{{ title }}<span id="title-suffix"></span></h2>
-            </div>
-            <div style="margin: 10px;">
-                <a href="{{ url_for('index') }}">
-                    <button class="landing-button">
-                        Home
-                    </button>
-                </a>
-            </div>
-        </div>
+        {% set header_title_suffix = true %}
+        {% set header_show_back = true %}
+        {% set header_show_home = true %}
+        {% include 'shared/nav_bar.html' %}
         <div style="margin-bottom: 8vh; margin-top: 3vh;">
             {% include "mobile_base/mobile_table.html" %}
         </div>

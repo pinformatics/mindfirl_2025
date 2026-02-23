@@ -29,43 +29,6 @@
             -webkit-font-smoothing:antialiased;
         }
 
-        /* Header */
-        header.site-header{
-            display: flex;
-            align-items: center;
-            justify-content: space-between;
-            padding: 1.25rem 1rem;
-            background: white;
-            box-shadow: 0 1px 3px rgba(20,20,30,0.04);
-            position: relative;
-        }
-
-        .brand-left img{
-            height: auto;
-            display: block;
-        }
-
-        .site-title{
-            position: absolute;
-            left: 50%;
-            transform: translateX(-50%);
-            margin: 0;
-            text-align: center;
-            font-size: clamp(1.1rem, 4.2vw, 2.2rem);
-            font-weight: 600;
-            color: #1f2937;
-            pointer-events: none;
-        }
-
-        .home-btn button {
-            padding: 0.5rem 0.9rem;
-            border-radius: 8px;
-            border: 1px solid #e0e6ef;
-            background: white;
-            cursor: pointer;
-            font-size: 0.95rem;
-        }
-
         main.container {
             max-width: var(--page-max-width);
             margin: 2rem auto;
@@ -164,12 +127,9 @@
 </head>
 <body>
 
-<header class="site-header">
-    <div class="brand-left">
-        <img src="{{ url_for('static', filename='images/site/population_informatics_icon.png') }}" style="width: 200px" alt="Organization icon">
-    </div>
-    <h1 class="site-title">{{ title }}</h1>
-</header>
+{% set header_show_back = false %}
+{% set header_show_home = false %}
+{% include 'shared/nav_bar.html' %}
 
 <main class="container">
     <!-- Row 1 -->

@@ -1,7 +1,7 @@
 import json
 import logging
 import time
-from flask import Flask, render_template, jsonify, request, make_response, Response, url_for
+from flask import Flask, render_template, jsonify, request, make_response, Response, url_for, session
 from functools import wraps
 from datetime import datetime
 
@@ -16,9 +16,8 @@ import data_model as dm
 import os
 import uuid
 
-import pickle
-
 app = Flask(__name__)
+app.secret_key = os.environ.get("FLASK_SECRET_KEY", "mindfirl_session_secret")
 
 # Initialize Redis connection
 redis_url = os.environ.get("REDIS_URL")
@@ -74,10 +73,135 @@ high_low = {
     "6": "High"
 }
 
+ATTRIBUTE_COLUMNS = [
+    ("ID", "id_reveal_level"),
+    ("First Name", "first_name_reveal_level"),
+    ("Last Name", "last_name_reveal_level"),
+    ("DoB(M/D/Y)", "dob_reveal_level"),
+    ("Sex", "sex_reveal_level"),
+    ("Race", "race_reveal_level")
+]
+
+
+def _get_pair_numbers(data_pairs):
+    pair_numbers = []
+    for i in range(0, len(data_pairs), 2):
+        pair_numbers.append(str(data_pairs[i][0]))
+    return pair_numbers
+
+
+def _get_partial_level_flags(data_pair_list):
+    partial_flags = []
+    for pair_index in range(len(data_pair_list.get_ids()) // 2):
+        data_pair = data_pair_list.get_data_pair_by_index(pair_index)
+        attr_flags = []
+        for attr_index in range(6):
+            next_mode = data_pair.get_next_display(attr_index, 'M')[0]
+            attr_flags.append(next_mode == 'partial')
+        partial_flags.append(attr_flags)
+    return partial_flags
+
+
+def _status_to_level(status, has_partial_level):
+    if status == 'P':
+        return 1
+    if status == 'F':
+        return 2 if has_partial_level else 1
+    return 0
+
+
+def _selection_to_conclusion(selection):
+    if not selection:
+        return {
+            "conclusion_code": "",
+            "conclusion_same_different": "No Response",
+            "conclusion_confidence": ""
+        }
+
+    return {
+        "conclusion_code": selection,
+        "conclusion_same_different": same_different.get(selection, "Unknown"),
+        "conclusion_confidence": high_low.get(selection, "Unknown")
+    }
+
+
+def _selection_to_conclusion_label(selection):
+    if not selection:
+        return ""
+
+    mapping = {
+        "1": "H different",
+        "2": "M different",
+        "3": "L different",
+        "4": "L same",
+        "5": "M same",
+        "6": "H same"
+    }
+    return mapping.get(selection, "")
+
+
+def _build_redis_csv_rows(filename):
+    data_pairs = dl.load_data_from_csv(filename)
+    data_pair_list = dm.DataPairList(data_pairs)
+    pair_numbers = _get_pair_numbers(data_pairs)
+    partial_level_flags = _get_partial_level_flags(data_pair_list)
+
+    response_keys = sorted(list(r.scan_iter('id:*___file:{}*'.format(filename))))
+    user_ids = [key.split('id:')[1].split('___file:')[0] for key in response_keys]
+    response_values = r.mget(response_keys) if response_keys else []
+
+    rows = []
+
+    for student_index, user_id in enumerate(user_ids):
+        selection_string = response_values[student_index] or ""
+        selections = selection_string.split(',') if selection_string else []
+
+        disclosed_characters = int(r.get(user_id + '_mindfil_disclosed_characters') or 0)
+        total_characters = int(r.get(user_id + '_mindfil_total_characters') or 0)
+        character_disclosed_percent_value = 0.0
+        if total_characters > 0:
+            character_disclosed_percent_value = round(100.0 * disclosed_characters / total_characters, 1)
+
+        kapr_value = float(r.get(user_id + '_KAPR') or 0.0)
+        privacy_risk_percent_value = round(100.0 * kapr_value, 1)
+
+        row = {
+            "student_index": student_index + 1,
+            "student_id": user_id,
+            "character_disclosed_percent_value": character_disclosed_percent_value,
+            "privacy_risk_percent_value": privacy_risk_percent_value
+        }
+
+        for pair_index, pair_number in enumerate(pair_numbers):
+            pair_num = pair_index + 1
+            selection = selections[pair_index].strip() if pair_index < len(selections) else ""
+            conclusion_label = _selection_to_conclusion_label(selection)
+
+            row['pair_{}_conclusion'.format(pair_num)] = conclusion_label
+
+            for attr_index, (_, column_name) in enumerate(ATTRIBUTE_COLUMNS):
+                key_row_1 = '{}-{}-1-{}'.format(user_id, pair_number, attr_index)
+                key_row_2 = '{}-{}-2-{}'.format(user_id, pair_number, attr_index)
+
+                status_1 = r.get(key_row_1) or 'M'
+                status_2 = r.get(key_row_2) or 'M'
+
+                has_partial_level = partial_level_flags[pair_index][attr_index]
+                level_1 = _status_to_level(status_1, has_partial_level)
+                level_2 = _status_to_level(status_2, has_partial_level)
+                row['pair_{}_{}'.format(pair_num, column_name)] = max(level_1, level_2)
+
+        rows.append(row)
+
+    return rows, pair_numbers
+
 def admin_required(f):
     @wraps(f)
     def decorated_function(*args, **kwargs):
-        if request.form.get('password') != ADMIN_PASSWORD:
+        if request.method == 'POST' and request.form.get('password') == ADMIN_PASSWORD:
+            session['is_admin'] = True
+
+        if not session.get('is_admin', False):
             return "Unauthorized access. Please provide the correct admin password.", 403
         
         return f(*args, **kwargs)
@@ -89,33 +213,59 @@ def admin_page():
     return render_template('admin.html')
 
 @app.route('/admin/download_redis_data', methods=['POST'])
+@admin_required
 def generate_redis_csv():
-    global pair
-    
-    pair_buffer = io.BytesIO()
-    pickle.dump(pair, pair_buffer)
-    pair_buffer.seek(0)
+    filename = 'data/ppirl.csv'
+    rows, pair_numbers = _build_redis_csv_rows(filename)
 
+    output = io.StringIO()
+    fieldnames = [
+        "student_index",
+        "student_id"
+    ]
+
+    for pair_index, _ in enumerate(pair_numbers):
+        pair_num = pair_index + 1
+        for _, column_name in ATTRIBUTE_COLUMNS:
+            fieldnames.append('pair_{}_{}'.format(pair_num, column_name))
+
+    for pair_index, _ in enumerate(pair_numbers):
+        pair_num = pair_index + 1
+        fieldnames.append('pair_{}_conclusion'.format(pair_num))
+
+    fieldnames.extend([
+        "character_disclosed_percent_value",
+        "privacy_risk_percent_value"
+    ])
+
+    writer = csv.DictWriter(output, fieldnames=fieldnames)
+    writer.writeheader()
+    for row in rows:
+        writer.writerow(row)
+
+    timestamp = datetime.utcnow().strftime('%Y%m%d_%H%M%S')
     return Response(
-        pair_buffer.getvalue(),
-        mimetype="application/octet-stream",
+        output.getvalue(),
+        mimetype='text/csv',
         headers={
-            'Content-Disposition': 'attachment; filename=irl.pkl'
+            'Content-Disposition': 'attachment; filename=mindfirl_report_{}.csv'.format(timestamp)
         }
     )
     
 @app.route('/admin/clear_redis', methods=['POST'])
+@admin_required
 def clear_redis():
     try:
         r.flushall()
-        return 'All data cleared from Redis!'
+        return '<a href="/admin">Back to Admin</a><br/><a href="/">Home</a><br/><br/>All data cleared from Redis!'
     except redis.ConnectionError as e:
         return "Error clearing Redis: {0}".format(str(e)), 500
 
 @app.route('/admin/view_all_redis_data', methods=['GET'])
+@admin_required
 def view_all_redis_data():
     try:
-        ret = '<h1>All Stored Data in Redis</h1>'
+        ret = '<a href="/admin">Back to Admin</a><br/><a href="/">Home</a><h1>All Stored Data in Redis</h1>'
         for key in r.scan_iter("*"):
             user_data = r.get(key)
             # if user_data:
@@ -309,6 +459,7 @@ def privacy_desktop():
     return display_results_page("data/ppirl.csv", "desktop_privacypreserving/base_privacy.html", "masked")
 
 @app.route('/admin/results')
+@admin_required
 def results_template():
     filename = "data/ppirl.csv"
     try:

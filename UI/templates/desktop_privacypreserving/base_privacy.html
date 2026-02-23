@@ -34,21 +34,9 @@
     </head>
 
     <body id="wrapper">
-        <div style="display: flex">
-            <div>
-                <img src="{{ url_for('static', filename='images/site/population_informatics_icon.png') }}" style="width: 200px">
-            </div>
-            <div id="title">
-                <h3>{{ title }}</h3>
-            </div>
-            <div style="margin: 10px;">
-                <a href="{{ url_for('index') }}">
-                    <button class="landing-button">
-                        Home
-                    </button>
-                </a>
-            </div>
-        </div>
+        {% set header_show_back = true %}
+        {% set header_show_home = true %}
+        {% include 'shared/nav_bar.html' %}
     </body>
     <body id="wrapper">
         <div id="content" style="display: flex; flex-wrap: wrap; justify-content: space-between; align-items: flex-start; padding: 20px;max-width: 88vw">

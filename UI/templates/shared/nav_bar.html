@@ -1,0 +1,54 @@
+{% set _logo_path = header_logo|default('images/site/population_informatics_icon.png') %}
+{% set _title_text = header_title|default(title) %}
+{% set _show_back = header_show_back|default(false) %}
+{% set _show_home = header_show_home|default(false) %}
+{% set _title_container_id = header_title_container_id|default('title') %}
+
+<style>
+    .shared-nav-brand {
+        width: 200px;
+        max-width: 40vw;
+        height: auto;
+    }
+
+    .shared-nav-title {
+        margin: 0;
+        font-size: clamp(1rem, 2.4vw, 1.5rem);
+        font-weight: 600;
+        text-align: center;
+        color: #1f2937;
+        white-space: nowrap;
+        overflow: hidden;
+        text-overflow: ellipsis;
+    }
+
+    .shared-nav-actions {
+        min-width: 130px;
+        justify-content: flex-end;
+    }
+</style>
+
+<nav class="navbar navbar-light bg-white border-bottom">
+    <div class="container d-flex flex-nowrap align-items-center justify-content-between py-2">
+        <a href="{{ url_for('index') }}" class="d-inline-flex align-items-center">
+            <img src="{{ url_for('static', filename=_logo_path) }}" class="shared-nav-brand" alt="Population Informatics icon">
+        </a>
+
+        <div id="{{ _title_container_id }}" class="flex-grow-1 px-3">
+            <h1 class="shared-nav-title">{{ _title_text }}{% if header_title_suffix|default(false) %}<span id="title-suffix"></span>{% endif %}</h1>
+        </div>
+
+        <div class="d-flex gap-2 shared-nav-actions">
+            {% if _show_back %}
+            <button class="btn btn-outline-secondary" type="button" onclick="if (window.history.length > 1) { window.history.back(); } else { window.location.href='{{ url_for('index') }}'; }">
+                Back
+            </button>
+            {% endif %}
+            {% if _show_home %}
+            <button class="btn btn-outline-primary" type="button" onclick="window.location.href='{{ url_for('index') }}'">
+                Home
+            </button>
+            {% endif %}
+        </div>
+    </div>
+</nav>
