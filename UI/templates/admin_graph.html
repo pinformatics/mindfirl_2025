@@ -1,0 +1,279 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="utf-8" />
+    <title>{{ title }}</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/style.css') }}?v=9999" type="text/css">
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/nav_bar.css') }}" type="text/css">
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/results.css') }}" type="text/css">
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/bootstrap.min.css') }}" type="text/css">
+
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+</head>
+<body>
+
+{% set header_title = 'Response Graphs' %}
+{% set header_show_back = true %}
+{% set header_show_home = true %}
+{% set header_back_url = url_for('admin_page') %}
+{% include 'shared/nav_bar.html' %}
+
+<main class="container py-4" style="max-width: 1080px;">
+    <div class="alert alert-info mb-4" role="alert">
+        Students included: <strong>{{ student_count }}</strong>
+    </div>
+
+    <div class="row g-4">
+        <div class="col-12">
+            <div class="card shadow-sm">
+                <div class="card-body">
+                    <div class="d-flex justify-content-between align-items-center mb-3">
+                        <h2 class="h5 mb-0">Average Reveal Level by Pair and Field</h2>
+                        <button class="btn btn-sm btn-outline-primary" type="button" data-export-target="revealLevelsChart" data-export-name="average_reveal_levels">Export PNG</button>
+                    </div>
+                    <canvas id="revealLevelsChart" height="120"></canvas>
+                </div>
+            </div>
+        </div>
+
+        <div class="col-12">
+            <div class="card shadow-sm">
+                <div class="card-body">
+                    <div class="d-flex justify-content-between align-items-center mb-3">
+                        <h2 class="h5 mb-0">Reveal-Level Distribution by Field (0/1/2)</h2>
+                        <button class="btn btn-sm btn-outline-primary" type="button" data-export-target="fieldRevealDistributionChart" data-export-name="reveal_distribution">Export PNG</button>
+                    </div>
+                    <canvas id="fieldRevealDistributionChart" height="120"></canvas>
+                </div>
+            </div>
+        </div>
+
+        <div class="col-12 col-lg-7">
+            <div class="card shadow-sm h-100">
+                <div class="card-body">
+                    <div class="d-flex justify-content-between align-items-center mb-3">
+                        <h2 class="h5 mb-0">Conclusion Distribution by Pair (1-6)</h2>
+                        <button class="btn btn-sm btn-outline-primary" type="button" data-export-target="conclusionChart" data-export-name="conclusion_distribution">Export PNG</button>
+                    </div>
+                    <canvas id="conclusionChart" height="160"></canvas>
+                </div>
+            </div>
+        </div>
+
+        <div class="col-12 col-lg-5">
+            <div class="card shadow-sm h-100">
+                <div class="card-body">
+                    <div class="d-flex justify-content-between align-items-center mb-3">
+                        <h2 class="h5 mb-0">Average Score Metrics</h2>
+                        <button class="btn btn-sm btn-outline-primary" type="button" data-export-target="scoreChart" data-export-name="average_scores">Export PNG</button>
+                    </div>
+                    <canvas id="scoreChart" height="160"></canvas>
+                </div>
+            </div>
+        </div>
+
+        <div class="col-12">
+            <div class="card shadow-sm">
+                <div class="card-body">
+                    <div class="d-flex justify-content-between align-items-center mb-3">
+                        <h2 class="h5 mb-0">Per-Student Score Metrics</h2>
+                        <button class="btn btn-sm btn-outline-primary" type="button" data-export-target="studentScoreChart" data-export-name="student_scores">Export PNG</button>
+                    </div>
+                    <canvas id="studentScoreChart" height="120"></canvas>
+                </div>
+            </div>
+        </div>
+    </div>
+</main>
+
+<script id="graph-data-json" type="application/json">{{ graph_data | tojson }}</script>
+
+<script>
+document.addEventListener('DOMContentLoaded', function () {
+const payloadElement = document.getElementById('graph-data-json');
+if (!payloadElement) {
+    return;
+}
+
+const graphData = JSON.parse(payloadElement.textContent || '{}');
+
+const colorPalette = [
+    '#2563eb', '#16a34a', '#f59e0b', '#dc2626', '#7c3aed', '#0891b2'
+];
+
+const canvasBackgroundPlugin = {
+    id: 'canvasBackgroundPlugin',
+    beforeDraw: (chart, args, pluginOptions) => {
+        const {ctx, canvas} = chart;
+        ctx.save();
+        ctx.globalCompositeOperation = 'destination-over';
+        ctx.fillStyle = (pluginOptions && pluginOptions.color) ? pluginOptions.color : '#ffffff';
+        ctx.fillRect(0, 0, canvas.width, canvas.height);
+        ctx.restore();
+    }
+};
+
+Chart.register(canvasBackgroundPlugin);
+
+const commonPluginOptions = {
+    plugins: {
+        canvasBackgroundPlugin: {
+            color: '#ffffff'
+        }
+    }
+};
+
+const revealDatasets = graphData.reveal_datasets.map((dataset, index) => ({
+    label: dataset.label,
+    data: dataset.data,
+    backgroundColor: colorPalette[index % colorPalette.length]
+}));
+
+new Chart(document.getElementById('revealLevelsChart'), {
+    type: 'bar',
+    data: {
+        labels: graphData.pair_labels,
+        datasets: revealDatasets
+    },
+    options: {
+        ...commonPluginOptions,
+        responsive: true,
+        scales: {
+            y: {
+                min: 0,
+                max: 2,
+                ticks: { stepSize: 0.5 },
+                title: { display: true, text: 'Reveal Level (0-2)' }
+            }
+        }
+    }
+});
+
+new Chart(document.getElementById('conclusionChart'), {
+    type: 'bar',
+    data: {
+        labels: graphData.pair_labels,
+        datasets: graphData.pair_conclusion_datasets.map((dataset, index) => ({
+            label: dataset.label,
+            data: dataset.data,
+            backgroundColor: colorPalette[index % colorPalette.length]
+        }))
+    },
+    options: {
+        ...commonPluginOptions,
+        responsive: true,
+        scales: {
+            x: { stacked: true },
+            y: {
+                beginAtZero: true,
+                stacked: true,
+                ticks: { precision: 0 }
+            }
+        }
+    }
+});
+
+new Chart(document.getElementById('fieldRevealDistributionChart'), {
+    type: 'bar',
+    data: {
+        labels: graphData.field_level_labels,
+        datasets: [
+            { label: 'Level 0', data: graphData.field_level_zero, backgroundColor: '#9ca3af' },
+            { label: 'Level 1', data: graphData.field_level_one, backgroundColor: '#2563eb' },
+            { label: 'Level 2', data: graphData.field_level_two, backgroundColor: '#16a34a' }
+        ]
+    },
+    options: {
+        ...commonPluginOptions,
+        responsive: true,
+        scales: {
+            x: { stacked: true },
+            y: {
+                beginAtZero: true,
+                stacked: true,
+                ticks: { precision: 0 }
+            }
+        }
+    }
+});
+
+new Chart(document.getElementById('scoreChart'), {
+    type: 'bar',
+    data: {
+        labels: ['Character Disclosed %', 'Privacy Risk %'],
+        datasets: [{
+            label: 'Average',
+            data: [graphData.avg_character_disclosed, graphData.avg_privacy_risk],
+            backgroundColor: ['#16a34a', '#dc2626']
+        }]
+    },
+    options: {
+        ...commonPluginOptions,
+        responsive: true,
+        scales: {
+            y: {
+                beginAtZero: true,
+                max: 100
+            }
+        }
+    }
+});
+
+new Chart(document.getElementById('studentScoreChart'), {
+    type: 'line',
+    data: {
+        labels: graphData.student_labels,
+        datasets: [
+            {
+                label: 'Character Disclosed %',
+                data: graphData.student_character_disclosed,
+                borderColor: '#16a34a',
+                backgroundColor: '#16a34a',
+                tension: 0.2
+            },
+            {
+                label: 'Privacy Risk %',
+                data: graphData.student_privacy_risk,
+                borderColor: '#dc2626',
+                backgroundColor: '#dc2626',
+                tension: 0.2
+            }
+        ]
+    },
+    options: {
+        ...commonPluginOptions,
+        responsive: true,
+        scales: {
+            y: {
+                beginAtZero: true,
+                max: 100
+            }
+        }
+    }
+});
+
+document.querySelectorAll('button[data-export-target]').forEach(function(button) {
+    button.addEventListener('click', function() {
+        const canvasId = button.getAttribute('data-export-target');
+        const fileName = button.getAttribute('data-export-name') || canvasId;
+        const canvas = document.getElementById(canvasId);
+        if (!canvas) {
+            return;
+        }
+
+        const imageUrl = canvas.toDataURL('image/png');
+        const link = document.createElement('a');
+        link.href = imageUrl;
+        link.download = fileName + '.png';
+        document.body.appendChild(link);
+        link.click();
+        document.body.removeChild(link);
+    });
+});
+});
+</script>
+
+</body>
+</html>

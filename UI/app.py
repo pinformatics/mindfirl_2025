@@ -83,6 +83,55 @@ ATTRIBUTE_COLUMNS = [
 ]
 
 
+def _extract_user_id_from_response_key(key):
+    if 'id:' not in key or '___file:' not in key:
+        return None
+    return key.split('id:', 1)[1].split('___file:', 1)[0]
+
+
+def _extract_file_part_from_response_key(key):
+    if '___file:' not in key:
+        return ''
+    return key.split('___file:', 1)[1].strip()
+
+
+def _get_snapshot_key_for_response_key(response_key):
+    return response_key + '___snapshot'
+
+
+def _safe_parse_json(raw_value, default_value):
+    if not raw_value:
+        return default_value
+    try:
+        return json.loads(raw_value)
+    except (TypeError, ValueError):
+        return default_value
+
+
+def _get_response_keys_for_filename(filename):
+    candidate_keys = list(r.scan_iter('id:*___file:*'))
+    if not candidate_keys:
+        return []
+
+    requested = filename.strip()
+    requested_base = os.path.basename(requested)
+    matched = []
+
+    for key in candidate_keys:
+        file_part = _extract_file_part_from_response_key(key)
+        file_base = os.path.basename(file_part)
+
+        if (
+            file_part == requested
+            or file_base == requested_base
+            or file_part.endswith('/' + requested_base)
+            or file_part.endswith(requested)
+        ):
+            matched.append(key)
+
+    return sorted(set(matched))
+
+
 def _get_pair_numbers(data_pairs):
     pair_numbers = []
     for i in range(0, len(data_pairs), 2):
@@ -129,15 +178,10 @@ def _selection_to_conclusion_label(selection):
     if not selection:
         return ""
 
-    mapping = {
-        "1": "H different",
-        "2": "M different",
-        "3": "L different",
-        "4": "L same",
-        "5": "M same",
-        "6": "H same"
-    }
-    return mapping.get(selection, "")
+    normalized = str(selection).strip()
+    if normalized in ["1", "2", "3", "4", "5", "6"]:
+        return normalized
+    return ""
 
 
 def _build_redis_csv_rows(filename):
@@ -146,24 +190,40 @@ def _build_redis_csv_rows(filename):
     pair_numbers = _get_pair_numbers(data_pairs)
     partial_level_flags = _get_partial_level_flags(data_pair_list)
 
-    response_keys = sorted(list(r.scan_iter('id:*___file:{}*'.format(filename))))
-    user_ids = [key.split('id:')[1].split('___file:')[0] for key in response_keys]
-    response_values = r.mget(response_keys) if response_keys else []
+    response_keys = _get_response_keys_for_filename(filename)
+    response_entries = []
+    for key in response_keys:
+        user_id = _extract_user_id_from_response_key(key)
+        if user_id:
+            response_entries.append((key, user_id))
+
+    filtered_response_keys = [entry[0] for entry in response_entries]
+    response_values = r.mget(filtered_response_keys) if filtered_response_keys else []
 
     rows = []
 
-    for student_index, user_id in enumerate(user_ids):
+    for student_index, (response_key, user_id) in enumerate(response_entries):
         selection_string = response_values[student_index] or ""
         selections = selection_string.split(',') if selection_string else []
 
-        disclosed_characters = int(r.get(user_id + '_mindfil_disclosed_characters') or 0)
-        total_characters = int(r.get(user_id + '_mindfil_total_characters') or 0)
-        character_disclosed_percent_value = 0.0
-        if total_characters > 0:
-            character_disclosed_percent_value = round(100.0 * disclosed_characters / total_characters, 1)
+        snapshot_key = _get_snapshot_key_for_response_key(response_key)
+        snapshot = _safe_parse_json(r.get(snapshot_key), {})
+        snapshot_reveal_levels = snapshot.get('pair_reveal_levels', {})
 
-        kapr_value = float(r.get(user_id + '_KAPR') or 0.0)
-        privacy_risk_percent_value = round(100.0 * kapr_value, 1)
+        if 'character_disclosed_percent_value' in snapshot:
+            character_disclosed_percent_value = float(snapshot.get('character_disclosed_percent_value', 0.0))
+        else:
+            disclosed_characters = int(r.get(user_id + '_mindfil_disclosed_characters') or 0)
+            total_characters = int(r.get(user_id + '_mindfil_total_characters') or 0)
+            character_disclosed_percent_value = 0.0
+            if total_characters > 0:
+                character_disclosed_percent_value = round(100.0 * disclosed_characters / total_characters, 1)
+
+        if 'privacy_risk_percent_value' in snapshot:
+            privacy_risk_percent_value = float(snapshot.get('privacy_risk_percent_value', 0.0))
+        else:
+            kapr_value = float(r.get(user_id + '_KAPR') or 0.0)
+            privacy_risk_percent_value = round(100.0 * kapr_value, 1)
 
         row = {
             "student_index": student_index + 1,
@@ -179,7 +239,13 @@ def _build_redis_csv_rows(filename):
 
             row['pair_{}_conclusion'.format(pair_num)] = conclusion_label
 
+            snapshot_pair_levels = snapshot_reveal_levels.get(str(pair_num), [])
+
             for attr_index, (_, column_name) in enumerate(ATTRIBUTE_COLUMNS):
+                if attr_index < len(snapshot_pair_levels):
+                    row['pair_{}_{}'.format(pair_num, column_name)] = int(snapshot_pair_levels[attr_index])
+                    continue
+
                 key_row_1 = '{}-{}-1-{}'.format(user_id, pair_number, attr_index)
                 key_row_2 = '{}-{}-2-{}'.format(user_id, pair_number, attr_index)
 
@@ -194,6 +260,103 @@ def _build_redis_csv_rows(filename):
         rows.append(row)
 
     return rows, pair_numbers
+
+
+def _build_graph_payload(rows, pair_numbers):
+    pair_labels = ['Pair {}'.format(index + 1) for index in range(len(pair_numbers))]
+    reveal_datasets = []
+
+    for _, column_name in ATTRIBUTE_COLUMNS:
+        values = []
+        for pair_index, _ in enumerate(pair_numbers):
+            pair_num = pair_index + 1
+            key = 'pair_{}_{}'.format(pair_num, column_name)
+            if rows:
+                avg_value = sum(float(row.get(key, 0) or 0) for row in rows) / len(rows)
+            else:
+                avg_value = 0
+            values.append(round(avg_value, 2))
+
+        reveal_datasets.append({
+            'label': column_name,
+            'data': values
+        })
+
+    conclusion_labels = ['1', '2', '3', '4', '5', '6']
+    conclusion_counts = {label: 0 for label in conclusion_labels}
+    pair_conclusion_counts = {label: [0 for _ in pair_numbers] for label in conclusion_labels}
+    for row in rows:
+        for pair_index, _ in enumerate(pair_numbers):
+            pair_num = pair_index + 1
+            conclusion_key = 'pair_{}_conclusion'.format(pair_num)
+            conclusion_value = str(row.get(conclusion_key, '')).strip()
+            if conclusion_value in conclusion_counts:
+                conclusion_counts[conclusion_value] += 1
+                pair_conclusion_counts[conclusion_value][pair_index] += 1
+
+    field_level_counts = {}
+    for _, column_name in ATTRIBUTE_COLUMNS:
+        field_level_counts[column_name] = {'0': 0, '1': 0, '2': 0}
+
+    for row in rows:
+        for pair_index, _ in enumerate(pair_numbers):
+            pair_num = pair_index + 1
+            for _, column_name in ATTRIBUTE_COLUMNS:
+                key = 'pair_{}_{}'.format(pair_num, column_name)
+                raw_level = row.get(key, 0)
+                try:
+                    level = int(raw_level)
+                except (TypeError, ValueError):
+                    level = 0
+                if level < 0:
+                    level = 0
+                if level > 2:
+                    level = 2
+                field_level_counts[column_name][str(level)] += 1
+
+    student_labels = []
+    student_character_disclosed = []
+    student_privacy_risk = []
+    for row in rows:
+        student_labels.append(str(row.get('student_index', len(student_labels) + 1)))
+        student_character_disclosed.append(float(row.get('character_disclosed_percent_value', 0) or 0))
+        student_privacy_risk.append(float(row.get('privacy_risk_percent_value', 0) or 0))
+
+    if rows:
+        avg_character_disclosed = round(
+            sum(float(row.get('character_disclosed_percent_value', 0) or 0) for row in rows) / len(rows),
+            2
+        )
+        avg_privacy_risk = round(
+            sum(float(row.get('privacy_risk_percent_value', 0) or 0) for row in rows) / len(rows),
+            2
+        )
+    else:
+        avg_character_disclosed = 0
+        avg_privacy_risk = 0
+
+    return {
+        'pair_labels': pair_labels,
+        'reveal_datasets': reveal_datasets,
+        'conclusion_labels': conclusion_labels,
+        'conclusion_counts': [conclusion_counts[label] for label in conclusion_labels],
+        'pair_conclusion_datasets': [
+            {
+                'label': label,
+                'data': pair_conclusion_counts[label]
+            }
+            for label in conclusion_labels
+        ],
+        'field_level_labels': [column_name for _, column_name in ATTRIBUTE_COLUMNS],
+        'field_level_zero': [field_level_counts[column_name]['0'] for _, column_name in ATTRIBUTE_COLUMNS],
+        'field_level_one': [field_level_counts[column_name]['1'] for _, column_name in ATTRIBUTE_COLUMNS],
+        'field_level_two': [field_level_counts[column_name]['2'] for _, column_name in ATTRIBUTE_COLUMNS],
+        'student_labels': student_labels,
+        'student_character_disclosed': student_character_disclosed,
+        'student_privacy_risk': student_privacy_risk,
+        'avg_character_disclosed': avg_character_disclosed,
+        'avg_privacy_risk': avg_privacy_risk
+    }
 
 def admin_required(f):
     @wraps(f)
@@ -251,6 +414,20 @@ def generate_redis_csv():
             'Content-Disposition': 'attachment; filename=mindfirl_report_{}.csv'.format(timestamp)
         }
     )
+
+
+@app.route('/admin/export_graph', methods=['GET'])
+@admin_required
+def export_graph_view():
+    filename = 'data/ppirl.csv'
+    rows, pair_numbers = _build_redis_csv_rows(filename)
+    graph_data = _build_graph_payload(rows, pair_numbers)
+    return render_template(
+        'admin_graph.html',
+        title='Response Graphs',
+        student_count=len(rows),
+        graph_data=graph_data
+    )
     
 @app.route('/admin/clear_redis', methods=['POST'])
 @admin_required
@@ -282,14 +459,11 @@ def process_redis_data(filename):
     data_pairs = dl.load_data_from_csv('data/ppirl.csv')
     DATASET = dl.load_data_from_csv('data/section2.csv')
 
-    all_keys = list(r.scan_iter('*file:data/ppirl.csv*'))
-    print("all keys")
-    print(all_keys)
+    filename_keys = _get_response_keys_for_filename(filename)
     html_elements_list = []
     value_data = [[0, 0, 0, 0, 0, 0, 0] for _ in range(len(data_pairs))]
 
-    if len(all_keys) > 0:    
-        filename_keys = [key for key in all_keys if filename in key]
+    if len(filename_keys) > 0:
         filename_values = r.mget(filename_keys)
         if filename_values is None:
             filename_values = []
@@ -495,7 +669,49 @@ def submit_selections():
         return jsonify(success=False, error="No User ID"), 400
         # user_id = "no_user_id"
     
-    r.set("id:" + user_id + "___file:" + data_path, ','.join(user_selections))
+    response_key = "id:" + user_id + "___file:" + data_path
+    r.set(response_key, ','.join(user_selections))
+
+    current_data_pairs = dl.load_data_from_csv('data/ppirl.csv')
+    current_data_pair_list = dm.DataPairList(current_data_pairs)
+    pair_numbers = _get_pair_numbers(current_data_pairs)
+    partial_level_flags = _get_partial_level_flags(current_data_pair_list)
+
+    pair_reveal_levels = {}
+    for pair_index, pair_number in enumerate(pair_numbers):
+        pair_num = pair_index + 1
+        attr_levels = []
+        for attr_index in range(6):
+            key_row_1 = '{}-{}-1-{}'.format(user_id, pair_number, attr_index)
+            key_row_2 = '{}-{}-2-{}'.format(user_id, pair_number, attr_index)
+
+            status_1 = r.get(key_row_1) or 'M'
+            status_2 = r.get(key_row_2) or 'M'
+
+            has_partial_level = partial_level_flags[pair_index][attr_index]
+            level_1 = _status_to_level(status_1, has_partial_level)
+            level_2 = _status_to_level(status_2, has_partial_level)
+            attr_levels.append(max(level_1, level_2))
+
+        pair_reveal_levels[str(pair_num)] = attr_levels
+
+    disclosed_characters = int(r.get(user_id + '_mindfil_disclosed_characters') or 0)
+    total_characters = int(r.get(user_id + '_mindfil_total_characters') or 0)
+    character_disclosed_percent_value = 0.0
+    if total_characters > 0:
+        character_disclosed_percent_value = round(100.0 * disclosed_characters / total_characters, 1)
+
+    kapr_value = float(r.get(user_id + '_KAPR') or 0.0)
+    privacy_risk_percent_value = round(100.0 * kapr_value, 1)
+
+    snapshot = {
+        'pair_reveal_levels': pair_reveal_levels,
+        'character_disclosed_percent_value': character_disclosed_percent_value,
+        'privacy_risk_percent_value': privacy_risk_percent_value,
+        'saved_at': datetime.utcnow().isoformat()
+    }
+    r.set(_get_snapshot_key_for_response_key(response_key), json.dumps(snapshot))
+
     logging.error("submit_selections{}".format(user_id))
     return jsonify(success=True)
 

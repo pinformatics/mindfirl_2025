@@ -3,30 +3,7 @@
 {% set _show_back = header_show_back|default(false) %}
 {% set _show_home = header_show_home|default(false) %}
 {% set _title_container_id = header_title_container_id|default('title') %}
-
-<style>
-    .shared-nav-brand {
-        width: 200px;
-        max-width: 40vw;
-        height: auto;
-    }
-
-    .shared-nav-title {
-        margin: 0;
-        font-size: clamp(1rem, 2.4vw, 1.5rem);
-        font-weight: 600;
-        text-align: center;
-        color: #1f2937;
-        white-space: nowrap;
-        overflow: hidden;
-        text-overflow: ellipsis;
-    }
-
-    .shared-nav-actions {
-        min-width: 130px;
-        justify-content: flex-end;
-    }
-</style>
+{% set _back_url = header_back_url|default('') %}
 
 <nav class="navbar navbar-light bg-white border-bottom">
     <div class="container d-flex flex-nowrap align-items-center justify-content-between py-2">
@@ -40,7 +17,7 @@
 
         <div class="d-flex gap-2 shared-nav-actions">
             {% if _show_back %}
-            <button class="btn btn-outline-secondary" type="button" onclick="if (window.history.length > 1) { window.history.back(); } else { window.location.href='{{ url_for('index') }}'; }">
+            <button class="btn btn-outline-secondary" type="button" onclick="{% if _back_url %}window.location.href='{{ _back_url }}';{% else %}if (window.history.length > 1) { window.history.back(); } else { window.location.href='{{ url_for('index') }}'; }{% endif %}">
                 Back
             </button>
             {% endif %}

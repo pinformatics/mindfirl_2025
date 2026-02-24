@@ -6,124 +6,10 @@
     <meta name="viewport" content="width=device-width, initial-scale=1" />
 
     <link rel="stylesheet" href="{{ url_for('static', filename='css/style.css') }}?v=9999" type="text/css">
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/nav_bar.css') }}" type="text/css">
     <link rel="stylesheet" href="{{ url_for('static', filename='css/results.css') }}" type="text/css">
     <link rel="stylesheet" href="{{ url_for('static', filename='css/ionicons.min.css')}}" type="text/css">
     <link rel="stylesheet" href="{{ url_for('static', filename='css/bootstrap.min.css') }}" type="text/css">
-
-    <style>
-        :root{
-            --page-max-width: 1000px;
-            --gap: 1rem;
-            --card-bg: #fbfbfd;
-            --accent: #0b5394;
-            --muted: #666;
-            --radius: 12px;
-        }
-
-        html,body{
-            height: 100%;
-            margin: 0;
-            font-family: system-ui, -apple-system, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
-            color: #222;
-            background: #f4f6f8;
-            -webkit-font-smoothing:antialiased;
-        }
-
-        main.container {
-            max-width: var(--page-max-width);
-            margin: 2rem auto;
-            padding: 0 1rem;
-            display: flex;
-            flex-direction: column;
-            gap: 1.5rem;
-        }
-
-        .row-card {
-            background: var(--card-bg);
-            border-radius: var(--radius);
-            padding: 2rem;
-            display: flex;
-            align-items: center;
-            justify-content: space-between;
-            gap: 1rem;
-            box-shadow: 0 6px 18px rgba(16,24,40,0.06);
-            border: 1px solid rgba(20,30,60,0.06);
-        }
-
-        .row-title {
-        flex: 0 0 50%;   /* lock to 40% of row width */
-        max-width: 50%;
-        text-align: left;
-        }
-
-        .row-title h2{
-            margin: 0;
-            font-size: clamp(1.2rem, 2.8vw, 1.6rem);
-            color: #0b5394;
-            line-height: 1.2;
-        }
-
-        .row-sub {
-            margin-top: 0.35rem;
-            font-size: 1rem;
-            color: var(--muted);
-        }
-
-        .row-actions {
-        flex: 1 1 60%;
-        display: flex;
-        gap: 1rem;
-        flex-wrap: wrap;
-        justify-content: flex-end;
-    }
-
-    .btn {
-        display: inline-flex;
-        align-items: center;
-        justify-content: center;
-        padding: 0.7rem 1rem;
-        border-radius: 10px;
-        border: none;
-        cursor: pointer;
-        font-size: clamp(0.9rem, 2.2vw, 1.05rem);
-        font-weight: 500;
-        background: var(--accent);
-        color: white;
-        transition: transform 120ms ease, box-shadow 120ms ease;
-        flex: 0 1 auto;      /* let button shrink/grow naturally */
-        max-width: 100%;     /* no overflow */
-    }
-
-    .btn:hover {
-        transform: translateY(-2px);
-        box-shadow: 0 6px 14px rgba(11,83,148,0.2);
-    }
-
-    .btn:focus {
-        outline: 3px solid rgba(11,83,148,0.3);
-        outline-offset: 2px;
-    }
-
-    /* Responsive stacking for narrow screens */
-    @media (max-width: 720px){
-        .row-card {
-            flex-direction: column;
-            text-align: center;
-        }
-        .row-title {
-            flex: 1 1 auto;
-            max-width: 100%;
-            text-align: center;
-        }
-        .row-actions {
-            justify-content: center;
-            width: 100%;
-        }
-        .btn {
-            flex: 1 1 100%;   /* buttons stretch full width on very small screens */
-        }
-    }
-    </style>
 </head>
 <body>
 
@@ -131,40 +17,44 @@
 {% set header_show_home = false %}
 {% include 'shared/nav_bar.html' %}
 
-<main class="container">
-    <!-- Row 1 -->
-    <section class="row-card">
-        <div class="row-title">
-            <h2>Privacy Preserving Interactive Record Linkage</h2>
-            <div class="row-sub">Demonstration of Minimum Necessary Disclosure for Interactive Record Linkage</div>
-        </div>
-        <div class="row-actions">
-            <a href="{{ url_for('privacy_desktop') }}" class="btn">Try MiNDFIRL</a>
-        </div>
-    </section>
-
-    <!-- Row 2 -->
-    <section class="row-card">
-        <div class="row-title">
-            <h2>What is Record Linkage?</h2>
-            <div class="row-sub">Demonstration of full-information Interactive Record Linkage</div>
-        </div>
-        <div class="row-actions">
-            <a href="{{ url_for('disclosing_desktop') }}" class="btn">Try it on Desktop</a>
-            <a href="{{ url_for('mobile') }}" class="btn">Try it on Mobile</a>
+<main class="container py-4">
+    <section class="card shadow-sm mb-3">
+        <div class="card-body d-flex flex-column flex-md-row justify-content-between align-items-md-center gap-3">
+            <div>
+                <h2 class="h4 mb-1 text-primary">Privacy Preserving Interactive Record Linkage</h2>
+                <p class="mb-0 text-muted">Demonstration of Minimum Necessary Disclosure for Interactive Record Linkage</p>
+            </div>
+            <div class="d-flex gap-2 flex-wrap">
+                <a href="{{ url_for('privacy_desktop') }}" class="btn btn-primary">Try MiNDFIRL</a>
+            </div>
         </div>
     </section>
 
-    <!-- Admin row -->
-    <div class="row-card admin-row">
-        <div>
-            <div class="small-note">Admin access</div>
-            <form class="admin-form" action="{{ url_for('admin_page') }}" method="POST" autocomplete="off">
-                <input type="password" name="password" placeholder="Admin password" required>
-                <button type="submit" class="btn">Admin Page</button>
+    <section class="card shadow-sm mb-3">
+        <div class="card-body d-flex flex-column flex-md-row justify-content-between align-items-md-center gap-3">
+            <div>
+                <h2 class="h4 mb-1 text-primary">What is Record Linkage?</h2>
+                <p class="mb-0 text-muted">Demonstration of full-information Interactive Record Linkage</p>
+            </div>
+            <div class="d-flex flex-column gap-3">
+                <a href="{{ url_for('disclosing_desktop') }}" class="btn btn-primary">Try it on Desktop</a>
+                <a href="{{ url_for('mobile') }}" class="btn btn-primary">Try it on Mobile</a>
+            </div>
+        </div>
+    </section>
+
+    <section class="card shadow-sm">
+        <div class="card-body d-flex flex-column flex-md-row justify-content-between align-items-md-center gap-3">
+            <div>
+                <h2 class="h5 mb-1 text-primary">Admin Access</h2>
+                <p class="mb-0 text-muted">Sign in to open admin tools.</p>
+            </div>
+            <form action="{{ url_for('admin_page') }}" method="POST" autocomplete="off" class="d-flex gap-2 flex-wrap mb-0">
+                <input class="form-control" type="password" name="password" placeholder="Admin password" required>
+                <button type="submit" class="btn btn-primary">Admin Page</button>
             </form>
         </div>
-    </div>
+    </section>
 </main>
 
 </body>
