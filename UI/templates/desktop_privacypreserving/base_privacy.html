@@ -53,37 +53,41 @@
                 </ul>
             </div>
 
-            <div id="legend" style="flex-basis: 40%; flex-direction: column; align-items: center; width: 20%; background-color: transparent; margin: 0; padding: 0;">
-                <h3 style="font-size: 1.5em; width: 100%; text-align: left;"><strong>Legend</strong></h3>
-                <div style="display: flex; width: 60%; max-width: 800px;  min-width:400px; padding: 0; gap: 1.5rem;">
-                    <div class="legend-section" style="flex: 1; padding: 0;">
-                        <h4 style="padding: 0; margin: 0; white-space: nowrap; font-size: 0.9em;"><strong>Highlight discrepancies</strong></h4> 
-                        <ul style="padding: 0; margin: 0; white-space: nowrap">
-                            <li><img src="{{ url_for('static', filename='images/site/missing.png') }}" alt="Missing fields" style="width: 20px; height: 20px;"> Missing fields</li>
-                            <li><img src="{{ url_for('static', filename='images/site/replace.png') }}" alt="Different characters" style="width: 20px; height: 20px;"> Different characters</li>
-                            <li><img src="{{ url_for('static', filename='images/site/indel.png') }}" alt="Extra characters" style="width: 20px; height: 20px;"> Extra characters</li>
-                            <li><img src="{{ url_for('static', filename='images/site/transpose.png') }}" alt="Transposed characters" style="width: 20px; height: 20px;"> Transposed characters</li>
-                            <li><img src="{{ url_for('static', filename='images/site/name_swap.png') }}" alt="Name/date swaps" style="width: 20px; height: 20px;"> Name/date swaps</li>
-                            <li><img src="{{ url_for('static', filename='images/site/diff.png') }}" alt="Major field differences" style="width: 20px; height: 20px;"> Major field differences</li>
-                        </ul>
-                        <h4 style="padding: 0; margin: 0; margin-top: 4px; white-space: nowrap; font-size: 0.9em;"><strong>Privacy Meter</strong></h4>
-                        <ul style="padding: 0; margin: 0; white-space: nowrap">
-                            <li><img src="{{ url_for('static', filename='images/site/red_bar_vertical.png') }}" alt="Privacy Budget Indicator" style="width: 20px; height: 20px;"> Allotted privacy budget</li>
-                        </ul> 
-                    </div>
-                    <div class="legend-section" style="flex: 1; padding: 0;">
-                        <h4 style="padding: 0; margin: 0; white-space: nowrap; font-size: 0.9em;"><strong>Highlight data details for privacy</strong></h4> <!-- Reduced font size -->
-                        <ul style="padding: 0; margin: 0;">
-                            <li><img src="../static/images/site/checkmark.png" alt="Same fields" style="width: 20px; height: 20px;"> Same fields</li>
-                            <li><span class="icon" style="color: black;">***&nbsp;</span>Same characters</li>
-                        </ul>
-                        <h4 style="padding: 0; margin: 0; margin-top: 4px; white-space: nowrap; font-size: 0.9em;"><strong>Name frequency data</strong></h4> <!-- Reduced font size -->
-                        <ul style="padding: 0; margin: 0;">
-                            <li><img src="{{ url_for('static', filename='images/site/unique.png') }}" alt="Unique name" style="width: 20px; height: 20px;"> Unique</li>
-                            <li><img src="{{ url_for('static', filename='images/site/rare.png') }}" alt="Rare name" style="width: 20px; height: 20px;"> Rare</li>
-                            <li><img src="{{ url_for('static', filename='images/site/common.png') }}" alt="Common name" style="width: 20px; height: 20px;"> Common</li>
-                            <li><img src="{{ url_for('static', filename='images/site/infinity.png') }}" alt="Highly common name" style="width: 20px; height: 20px;"> Highly common</li>
-                        </ul>
+            <div id="legend" style="flex-basis: 40%; min-width: 420px; margin: 0; padding: 0;">
+                <div class="card border-primary shadow-sm">
+                    <div class="card-header bg-primary-subtle fw-bold">Legend</div>
+                    <div class="card-body">
+                        <div class="row g-3">
+                            <div class="col-12 col-lg-6">
+                                <h4 class="h6 mb-1"><strong>Highlight discrepancies</strong></h4>
+                                <ul class="mb-2" style="padding-left: 1rem; white-space: nowrap;">
+                                    <li><img src="{{ url_for('static', filename='images/site/missing.png') }}" alt="Missing fields" style="width: 20px; height: 20px;"> Missing fields</li>
+                                    <li><img src="{{ url_for('static', filename='images/site/replace.png') }}" alt="Different characters" style="width: 20px; height: 20px;"> Different characters</li>
+                                    <li><img src="{{ url_for('static', filename='images/site/indel.png') }}" alt="Extra characters" style="width: 20px; height: 20px;"> Extra characters</li>
+                                    <li><img src="{{ url_for('static', filename='images/site/transpose.png') }}" alt="Transposed characters" style="width: 20px; height: 20px;"> Transposed characters</li>
+                                    <li><img src="{{ url_for('static', filename='images/site/name_swap.png') }}" alt="Name/date swaps" style="width: 20px; height: 20px;"> Name/date swaps</li>
+                                    <li><img src="{{ url_for('static', filename='images/site/diff.png') }}" alt="Major field differences" style="width: 20px; height: 20px;"> Major field differences</li>
+                                </ul>
+                                <h4 class="h6 mb-1"><strong>Privacy Meter</strong></h4>
+                                <ul class="mb-0" style="padding-left: 1rem; white-space: nowrap;">
+                                    <li><img src="{{ url_for('static', filename='images/site/red_bar_vertical.png') }}" alt="Privacy Budget Indicator" style="width: 20px; height: 20px;"> Allotted privacy budget</li>
+                                </ul>
+                            </div>
+                            <div class="col-12 col-lg-6">
+                                <h4 class="h6 mb-1"><strong>Highlight data details for privacy</strong></h4>
+                                <ul class="mb-2" style="padding-left: 1rem;">
+                                    <li><img src="../static/images/site/checkmark.png" alt="Same fields" style="width: 20px; height: 20px;"> Same fields</li>
+                                    <li><span class="icon" style="color: black;">***&nbsp;</span>Same characters</li>
+                                </ul>
+                                <h4 class="h6 mb-1"><strong>Name frequency data</strong></h4>
+                                <ul class="mb-0" style="padding-left: 1rem;">
+                                    <li><img src="{{ url_for('static', filename='images/site/unique.png') }}" alt="Unique name" style="width: 20px; height: 20px;"> Unique</li>
+                                    <li><img src="{{ url_for('static', filename='images/site/rare.png') }}" alt="Rare name" style="width: 20px; height: 20px;"> Rare</li>
+                                    <li><img src="{{ url_for('static', filename='images/site/common.png') }}" alt="Common name" style="width: 20px; height: 20px;"> Common</li>
+                                    <li><img src="{{ url_for('static', filename='images/site/infinity.png') }}" alt="Highly common name" style="width: 20px; height: 20px;"> Highly common</li>
+                                </ul>
+                            </div>
+                        </div>
                     </div>
                 </div>
             </div>

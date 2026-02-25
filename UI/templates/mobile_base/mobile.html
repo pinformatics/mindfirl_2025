@@ -42,19 +42,15 @@
             </ul>
         </div>
 
-        <div id="legend" style="flex-basis: 40%; flex-direction: column; align-items: center; width: 20%; background-color: transparent; margin: 0; padding: 0;">
-            <h3 style="font-size: 1.5em; width: 100%; text-align: left;"><strong>Legend</strong></h3>
-            <div style="display: flex; width: 60%; max-width: 800px; padding: 0; gap: 2.1rem;">
-                <div class="legend-section" style="flex: 1; padding: 0;">
-                    <h4 style="padding: 0; margin: 0; white-space: nowrap; font-size: 1.4em; margin-bottom: 4px;"><strong>Highlight discrepancies</strong></h4> 
-                    <ul style="padding: 0; margin: 0; white-space: nowrap; font-size: 1.4rem;">
+        <div id="legend" style="flex-basis: 40%; min-width: 420px; margin: 0; padding: 0;">
+            <div class="card border-primary shadow-sm">
+                <div class="card-header bg-primary-subtle fw-bold">Legend</div>
+                <div class="card-body">
+                    <h4 class="h6 mb-1"><strong>Highlight discrepancies</strong></h4>
+                    <ul class="mb-0" style="padding-left: 1rem; white-space: nowrap; font-size: 1.4rem;">
                         <li><img src="{{ url_for('static', filename='images/site/missing.png') }}" alt="Missing fields" style="width: 20px; height: 20px;"> Missing fields</li>
                         <li><img src="{{ url_for('static', filename='images/site/replace.png') }}" alt="Different characters" style="width: 20px; height: 20px;"> Different characters</li>
                         <li><img src="{{ url_for('static', filename='images/site/indel.png') }}" alt="Extra characters" style="width: 20px; height: 20px;"> Extra characters</li>
-                    <!-- </ul>
-                </div>
-                <div class="legend-section" style="flex: 1; padding: 0;">
-                    <ul style="padding: 0; margin-top: 0.9em; white-space: nowrap;"> -->
                         <li><img src="{{ url_for('static', filename='images/site/transpose.png') }}" alt="Transposed characters" style="width: 20px; height: 20px;"> Transposed characters</li>
                         <li><img src="{{ url_for('static', filename='images/site/name_swap.png') }}" alt="Name/date swaps" style="width: 20px; height: 20px;"> Name/date swaps</li>
                         <li><img src="{{ url_for('static', filename='images/site/diff.png') }}" alt="Major field differences" style="width: 20px; height: 20px;"> Major field differences</li>
