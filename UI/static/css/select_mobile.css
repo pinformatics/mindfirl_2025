@@ -114,13 +114,35 @@
 
 .mobile-help-text {
   font-size: 1rem;
+  text-align: center;
+}
+
+.mobile-help-text ul,
+.mobile-help-text ul ul {
+  display: inline-block;
+  text-align: left;
+  margin: 0 auto;
+}
+
+.mobile-legend-container {
+  max-width: 760px;
+  margin-left: auto !important;
+  margin-right: auto !important;
+}
+
+#legend .card-header,
+#legend .card-body,
+#legend .h6 {
+  text-align: left;
 }
 
 .mobile-legend-list {
+  display: inline-block;
   padding-left: 1rem;
-  margin-bottom: 0;
+  margin: 0 auto;
   white-space: normal;
   font-size: 1rem;
+  text-align: left;
 }
 
 .btn-mobile-control {
@@ -218,6 +240,10 @@
 
   .mobile-help-text {
     font-size: 0.95rem;
+  }
+
+  .mobile-legend-container {
+    max-width: 100%;
   }
 
   .mobile-legend-list {

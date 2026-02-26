@@ -1,0 +1,44 @@
+{% extends 'admin/base.html' %}
+
+{% block page_title %}Redis Data{% endblock %}
+{% block header_title %}Redis Data{% endblock %}
+{% block header_back %}{% set header_back_url = url_for('admin_page') %}{% endblock %}
+
+{% block content %}
+<main class="container py-4">
+    <div class="mb-4">
+        <h1 class="h3 mb-1">All Stored Data in Redis</h1>
+        <p class="text-muted mb-0">Live key/value entries currently available for admin review.</p>
+    </div>
+
+    {% if redis_items %}
+    <div class="card shadow-sm bg-white">
+        <div class="card-header small fw-semibold">Redis Entries ({{ redis_items|length }})</div>
+        <div class="card-body p-0">
+            <div class="table-responsive">
+                <table class="table table-sm table-bordered mb-0">
+                    <thead class="table-light">
+                        <tr>
+                            <th scope="col" class="py-1 px-2">Key</th>
+                            <th scope="col" class="py-1 px-2">Value</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for item in redis_items %}
+                        <tr>
+                            <td class="py-1 px-2 align-top"><code class="small text-break d-inline-block">{{ item.key }}</code></td>
+                            <td class="py-1 px-2 align-top"><div class="small mb-0 text-break" style="white-space: pre-wrap;">{{ item.value }}</div></td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+    {% else %}
+    <div class="alert alert-info mb-0" role="alert">
+        Redis is currently empty.
+    </div>
+    {% endif %}
+</main>
+{% endblock %}

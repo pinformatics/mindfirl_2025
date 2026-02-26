@@ -1,24 +1,9 @@
-<!DOCTYPE html>
-<html lang="en">
-<head>
-    <meta charset="utf-8" />
-    <title>Admin Tools</title>
-    <meta name="viewport" content="width=device-width, initial-scale=1" />
-    <link rel="icon" type="image/png" href="{{ url_for('static', filename='images/site/tamu-logo.png') }}">
+{% extends 'admin/base.html' %}
 
-    <link rel="stylesheet" href="{{ url_for('static', filename='css/style.css') }}?v=9999" type="text/css">
-    <link rel="stylesheet" href="{{ url_for('static', filename='css/nav_bar.css') }}" type="text/css">
-    <link rel="stylesheet" href="{{ url_for('static', filename='css/results.css') }}" type="text/css">
-    <link rel="stylesheet" href="{{ url_for('static', filename='css/ionicons.min.css')}}" type="text/css">
-    <link rel="stylesheet" href="{{ url_for('static', filename='css/bootstrap.min.css') }}" type="text/css">
-</head>
-<body class="bg-light">
+{% block page_title %}Admin Tools{% endblock %}
+{% block header_title %}Admin Tools{% endblock %}
 
-{% set header_title = 'Admin Tools' %}
-{% set header_show_back = true %}
-{% set header_show_home = true %}
-{% include 'shared/nav_bar.html' %}
-
+{% block content %}
 <main class="container py-4" style="max-width: 980px;">
     <div class="card shadow-sm mb-3">
         <div class="card-body d-flex flex-column flex-md-row justify-content-between align-items-md-center gap-3">
@@ -39,6 +24,7 @@
                 <p class="mb-0 text-muted">Download response and disclosure data as CSV.</p>
             </div>
             <form action="{{ url_for('generate_redis_csv') }}" method="post" class="mb-0">
+                <input type="hidden" name="csrf_token" value="{{ csrf_token }}">
                 <button class="btn btn-primary px-4" type="submit">Download CSV</button>
             </form>
         </div>
@@ -60,7 +46,8 @@
                 <h2 class="h5 mb-1 text-danger">Clear Redis Data</h2>
                 <p class="mb-0 text-muted">This is irreversible. All stored response data will be deleted.</p>
             </div>
-            <form action="{{ url_for('clear_redis') }}" method="post" class="mb-0" onsubmit="return confirm('Are you sure you want to clear all Redis data? This action cannot be undone.');">
+            <form id="clear-redis-form" action="{{ url_for('clear_redis') }}" method="post" class="mb-0">
+                <input type="hidden" name="csrf_token" value="{{ csrf_token }}">
                 <button class="btn btn-danger px-4" type="submit">Clear Redis Data</button>
             </form>
         </div>
@@ -78,6 +65,44 @@
         </div>
     </div>
 </main>
+<script>
+document.addEventListener('DOMContentLoaded', function () {
+    const clearForm = document.getElementById('clear-redis-form');
+    const csrfTokenInput = clearForm ? clearForm.querySelector('input[name="csrf_token"]') : null;
+    const csrfToken = csrfTokenInput ? csrfTokenInput.value : '';
+    if (!clearForm) {
+        return;
+    }
 
-</body>
-</html>
+    clearForm.addEventListener('submit', async function (event) {
+        event.preventDefault();
+
+        const confirmed = window.confirm('Are you sure you want to clear all Redis data? This action cannot be undone.');
+        if (!confirmed) {
+            return;
+        }
+
+        try {
+            const response = await fetch(clearForm.action, {
+                method: 'POST',
+                credentials: 'same-origin',
+                headers: {
+                    'X-CSRF-Token': csrfToken
+                }
+            });
+
+            const data = await response.json();
+            if (!response.ok || !data.success) {
+                window.alert(data.message || 'Failed to clear Redis data.');
+                return;
+            }
+
+            window.alert('All data cleared.');
+            window.location.href = '/';
+        } catch (error) {
+            window.alert('Failed to clear Redis data.');
+        }
+    });
+});
+</script>
+{% endblock %}

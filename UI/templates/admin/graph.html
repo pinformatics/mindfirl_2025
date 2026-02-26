@@ -1,26 +1,14 @@
-<!DOCTYPE html>
-<html lang="en">
-<head>
-    <meta charset="utf-8" />
-    <title>{{ title }}</title>
-    <meta name="viewport" content="width=device-width, initial-scale=1" />
-    <link rel="icon" type="image/png" href="{{ url_for('static', filename='images/site/tamu-logo.png') }}">
+{% extends 'admin/base.html' %}
 
-    <link rel="stylesheet" href="{{ url_for('static', filename='css/style.css') }}?v=9999" type="text/css">
-    <link rel="stylesheet" href="{{ url_for('static', filename='css/nav_bar.css') }}" type="text/css">
-    <link rel="stylesheet" href="{{ url_for('static', filename='css/results.css') }}" type="text/css">
-    <link rel="stylesheet" href="{{ url_for('static', filename='css/bootstrap.min.css') }}" type="text/css">
+{% block page_title %}{{ title }}{% endblock %}
+{% block header_title %}Response Graphs{% endblock %}
+{% block header_back %}{% set header_back_url = url_for('admin_page') %}{% endblock %}
 
-    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
-</head>
-<body class="bg-light">
+{% block extra_head %}
+<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+{% endblock %}
 
-{% set header_title = 'Response Graphs' %}
-{% set header_show_back = true %}
-{% set header_show_home = true %}
-{% set header_back_url = url_for('admin_page') %}
-{% include 'shared/nav_bar.html' %}
-
+{% block content %}
 <main class="container py-4" style="max-width: 1080px;">
     <div class="alert alert-info mb-4" role="alert">
         Students included: <strong>{{ student_count }}</strong>
@@ -90,7 +78,9 @@
 </main>
 
 <script id="graph-data-json" type="application/json">{{ graph_data | tojson }}</script>
+{% endblock %}
 
+{% block scripts %}
 <script>
 document.addEventListener('DOMContentLoaded', function () {
 const payloadElement = document.getElementById('graph-data-json');
@@ -275,6 +265,4 @@ document.querySelectorAll('button[data-export-target]').forEach(function(button)
 });
 });
 </script>
-
-</body>
-</html>
+{% endblock %}

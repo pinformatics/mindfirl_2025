@@ -1,0 +1,25 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>{% block page_title %}Admin{% endblock %}</title>
+    <link rel="icon" type="image/png" href="{{ url_for('static', filename='images/site/tamu-logo.png') }}">
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/style.css') }}?v=9999" type="text/css">
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/nav_bar.css') }}" type="text/css">
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/results.css') }}" type="text/css">
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/bootstrap.min.css') }}" type="text/css">
+    {% block extra_head %}{% endblock %}
+</head>
+<body class="bg-light">
+{% set header_title = self.header_title()|trim %}
+{% set header_show_back = true %}
+{% set header_show_home = true %}
+{% block header_back %}{% endblock %}
+{% include 'shared/nav_bar.html' %}
+
+{% block content %}{% endblock %}
+
+{% block scripts %}{% endblock %}
+</body>
+</html>

@@ -42,20 +42,62 @@ $(document).ready(function(){
 
 
 $(document).ready(function() {
-    var $options = $(".submit-button");
+    function getUnansweredPairIndexes() {
+        const unanswered = [];
+        $(".choice-panel").each(function(index) {
+            const hasSelected = $(this).find("li.input_radio.ion-android-radio-button-on").length > 0;
+            if (!hasSelected) {
+                unanswered.push(index + 1);
+            }
+        });
+        return unanswered;
+    }
 
-    $options.click(function(e) {
-        e.preventDefault()
+    $(document).on("click", "button, .submit-button", function(e) {
+        var $button = $(this);
+        var buttonText = ($button.text() || "").trim().toLowerCase();
+        var isSelectionSubmit =
+            $button.hasClass("submit-button") ||
+            $button.attr("id") === "submit-selections" ||
+            buttonText === "submit";
+
+        if (!isSelectionSubmit) {
+            return;
+        }
+
+        e.preventDefault();
+
+        const unansweredPairs = getUnansweredPairIndexes();
+        if (unansweredPairs.length > 0) {
+            alert(
+                "Please answer all pairs before submitting. Missing responses for pair(s): " +
+                unansweredPairs.join(", ")
+            );
+            return;
+        }
+
         fetch('/submit_selections', {
             method: 'POST',
             credentials: 'same-origin'
         })
         .then(response => {
-            alert("Thank you for participating! Your submissions have been recorded. " + 
-                "If you would like to change your submissions, you may do so and then resubmit anytime.")
+            if (!response.ok) {
+                return response.json().then(payload => {
+                    const message = (payload && payload.error) ? payload.error : "Failed to submit selections";
+                    throw new Error(message);
+                }).catch(() => {
+                    throw new Error("Failed to submit selections");
+                });
+            }
+            return response.json();
         })
-        .catch(error => {
-            // handle error here
+        .then(() => {
+            alert("Thank you for participating! Your submissions have been recorded. " +
+                "If you would like to change your submissions, you may do so and then resubmit anytime.");
+            window.location.href = "/";
+        })
+        .catch(() => {
+            alert("Submission failed. Please make sure all responses are filled and try again.");
         });
     });
-})
+});

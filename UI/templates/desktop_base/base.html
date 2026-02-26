@@ -20,8 +20,8 @@
         {% include 'shared/nav_bar.html' %}
     </body>   
     <body class="bg-light">
-        <div id="content" style="display: flex; flex-wrap: wrap; justify-content: space-between; align-items: flex-start; padding: 20px;max-width: 88vw">
-            <div style="flex-basis: 55%; min-width: 300px; margin-right: 1%; margin-top: 0.4em; font-size:1.1em">
+        <div id="content" style="display: flex; flex-wrap: wrap; justify-content: center; align-items: flex-start; gap: 20px; padding: 20px; max-width: 88vw; margin: 0 auto;">
+            <div style="flex-basis: 55%; min-width: 300px; margin-top: 0.4em; font-size:1.1em">
                 <ul>
                     <li>Note: To see all features, please use Google Chrome or Safari browser.</li>
                     <li>View the tutorial below:
@@ -74,15 +74,15 @@
         </div>
     </body>
     <body class="bg-light">
-        <div id="flex-row-wrapper">
+        <div id="flex-row-wrapper" style="justify-content: center; margin: 0 auto 5px auto;">
             {% include "desktop_base/table.html" %}
         </div>
     </body>
     <br />
     <br />
     <body class="bg-light">
-        <form> 
-            <button class="btn btn-primary px-4" style="margin-left: 45%">Submit</button>
+        <form style="text-align: center;"> 
+            <button class="btn btn-primary px-4">Submit</button>
         </form>
         <div id="footer_filler"></div>
         <footer class="footer">
