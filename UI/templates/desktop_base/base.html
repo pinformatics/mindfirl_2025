@@ -3,6 +3,7 @@
     <head>
         <meta charset="utf-8">
         <title>IRL</title>
+        <link rel="icon" type="image/png" href="{{ url_for('static', filename='images/site/tamu-logo.png') }}">
 
         <link rel="stylesheet" href="{{ url_for('static', filename='css/style.css') }}?v=9999" type="text/css">
         <link rel="stylesheet" href="{{ url_for('static', filename='css/nav_bar.css') }}" type="text/css">
@@ -13,12 +14,12 @@
         <link href="https://code.ionicframework.com/ionicons/2.0.1/css/ionicons.min.css" rel="stylesheet">
     </head>
 
-    <body id="wrapper">
+    <body class="bg-light">
         {% set header_show_back = true %}
         {% set header_show_home = true %}
         {% include 'shared/nav_bar.html' %}
     </body>   
-    <body id="wrapper">
+    <body class="bg-light">
         <div id="content" style="display: flex; flex-wrap: wrap; justify-content: space-between; align-items: flex-start; padding: 20px;max-width: 88vw">
             <div style="flex-basis: 55%; min-width: 300px; margin-right: 1%; margin-top: 0.4em; font-size:1.1em">
                 <ul>
@@ -72,16 +73,16 @@
             </div>
         </div>
     </body>
-    <body>
+    <body class="bg-light">
         <div id="flex-row-wrapper">
             {% include "desktop_base/table.html" %}
         </div>
     </body>
     <br />
     <br />
-    <body>
+    <body class="bg-light">
         <form> 
-            <button class="submit-button" style="margin-left: 45%">Submit</button>
+            <button class="btn btn-primary px-4" style="margin-left: 45%">Submit</button>
         </form>
         <div id="footer_filler"></div>
         <footer class="footer">

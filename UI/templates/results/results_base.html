@@ -3,6 +3,7 @@
     <head>
         <meta charset="utf-8">
         <title>IRL</title>
+        <link rel="icon" type="image/png" href="{{ url_for('static', filename='images/site/tamu-logo.png') }}">
         <link rel="stylesheet" href="{{ url_for('static', filename='css/style.css') }}?v=9999" type="text/css">
         <link rel="stylesheet" href="{{ url_for('static', filename='css/nav_bar.css') }}" type="text/css">
         <link rel="stylesheet" href="{{ url_for('static', filename='css/results.css') }}" type="text/css">
@@ -10,13 +11,13 @@
         <link rel="stylesheet" href="{{ url_for('static', filename='css/bootstrap.min.css') }}" type="text/css">
     </head>
 
-    <body id="wrapper">
+    <body class="bg-light">
         {% set header_show_back = true %}
         {% set header_show_home = true %}
         {% set header_back_url = url_for('admin_page') %}
         {% include 'shared/nav_bar.html' %}
     </body>   
-    <body id="wrapper">
+    <body class="bg-light">
         <!-- <div style="clear:both"></div> -->
         <div id="content" style="display: flex; flex-wrap: wrap; justify-content: space-between; align-items: flex-start; padding: 20px;">
             <div style="flex-basis: 55%; min-width: 300px; margin-right: 1%; margin-top: 0.4em; font-size:1.1em">
@@ -57,7 +58,7 @@
             </div>
         </div>
     </body>
-    <body>
+    <body class="bg-light">
         <div id="flex-row-wrapper">
             {% include "results/results_table.html" %}
             {% include "results.html" %}
@@ -65,7 +66,7 @@
     </body>
     <br />
     <br />
-    <body>
+    <body class="bg-light">
         <div id="footer_filler"></div>
         <footer class="footer">
             <div class="container">

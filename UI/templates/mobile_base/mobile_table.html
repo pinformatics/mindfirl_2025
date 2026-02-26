@@ -1,5 +1,5 @@
-<div style="display: flex; flex-direction: row; width: 80vw; margin-left: 8vw;">
-    <div style="display: flex; flex-direction: column; justify-content: flex-start; max-width: 66vw;">  
+<div class="w-100 d-flex justify-content-center">
+    <div class="w-100">  
         <table id="mobile-table">
             <tbody>
             <tr>
@@ -97,10 +97,10 @@
                 {% endfor %}
             </tr>
             <tr>
-                <th></th>
+                <th class="mobile-choice-spacer"></th>
                 {% for r in data %}
                 {% set loop_index0 = loop.index0 %}
-                <td>
+                <td class="mobile-choice-cell">
                     {% include "choice_panel.html" %}
                 </td>
                 {% endfor %}

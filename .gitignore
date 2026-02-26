@@ -34,3 +34,7 @@ n2v_models/
 # OS
 .DS_Store
 Thumbs.db
+
+# Deployment artifacts
+app.zip
+webapp_logs*.zip

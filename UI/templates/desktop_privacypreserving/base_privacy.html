@@ -3,6 +3,7 @@
     <head>
         <meta charset="utf-8">
         <title>IRL</title>
+        <link rel="icon" type="image/png" href="{{ url_for('static', filename='images/site/tamu-logo.png') }}">
 
         <link rel="stylesheet" href="{{ url_for('static', filename='css/style.css') }}?v=9999" type="text/css">
         <link rel="stylesheet" href="{{ url_for('static', filename='css/nav_bar.css') }}" type="text/css">
@@ -34,12 +35,12 @@
         </script>
     </head>
 
-    <body id="wrapper">
+    <body class="bg-light">
         {% set header_show_back = true %}
         {% set header_show_home = true %}
         {% include 'shared/nav_bar.html' %}
     </body>
-    <body id="wrapper">
+    <body class="bg-light">
         <div id="content" style="display: flex; flex-wrap: wrap; justify-content: space-between; align-items: flex-start; padding: 20px;max-width: 88vw">
             <div style="flex-basis: 55%; min-width: 300px; margin-right: 1%; margin-top: 0.4em; font-size:1.1em">
                 <ul>
@@ -93,7 +94,7 @@
             </div>
         </div>
     </body>
-    <div class="privacy-budget-div" style="flex-basis: 49%; min-width: 300px; margin-left: 1%;">      
+    <div class="privacy-budget-div" style="width: 95vw; min-width: 0; margin: 0 30px 15px 30px; box-sizing: border-box;">      
         <div>Character disclosed: <span id="character-disclosed-value">0%</span><span id="character-percentage-delta-value"></span></div>
         <div class="progress">
             <div id="character-disclosed-bar" class="progress-bar progress-bar-striped bg-info" role="progressbar" style="width: 0%" aria-valuenow="30" aria-valuemin="0" aria-valuemax="100"></div>
@@ -107,16 +108,16 @@
             <div id="privacy-risk-delta" class="progress-bar bg-warning" role="progressbar" style="width: 0%" aria-valuenow="20" aria-valuemin="0" aria-valuemax="100"></div>
         </div>
     </div>
-    <body>
+    <body class="bg-light">
         <div id="flex-row-wrapper">
             {% include "desktop_privacypreserving/table_privacy.html" %}
         </div>
     </body>
     <br />
     <br />
-    <body>
+    <body class="bg-light">
         <form> 
-            <button class="submit-button" style="margin-left: 45%">Submit</button>
+            <button class="btn btn-primary px-4" style="margin-left: 45%">Submit</button>
         </form>
         <div id="footer_filler"></div>
         <footer class="footer">

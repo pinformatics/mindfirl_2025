@@ -2,7 +2,7 @@
 {% set _title_text = header_title|default(title) %}
 {% set _show_back = header_show_back|default(false) %}
 {% set _show_home = header_show_home|default(false) %}
-{% set _title_container_id = header_title_container_id|default('title') %}
+{% set _title_container_id = header_title_container_id|default('') %}
 {% set _back_url = header_back_url|default('') %}
 
 <nav class="navbar navbar-light bg-white border-bottom">
@@ -11,7 +11,7 @@
             <img src="{{ url_for('static', filename=_logo_path) }}" class="shared-nav-brand" alt="Population Informatics icon">
         </a>
 
-        <div id="{{ _title_container_id }}" class="flex-grow-1 px-3">
+        <div{% if _title_container_id %} id="{{ _title_container_id }}"{% endif %} class="flex-grow-1 px-3 shared-nav-title-wrap">
             <h1 class="shared-nav-title">{{ _title_text }}{% if header_title_suffix|default(false) %}<span id="title-suffix"></span>{% endif %}</h1>
         </div>
 

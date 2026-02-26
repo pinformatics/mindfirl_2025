@@ -4,6 +4,7 @@
     <meta charset="utf-8" />
     <title>Admin Tools</title>
     <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <link rel="icon" type="image/png" href="{{ url_for('static', filename='images/site/tamu-logo.png') }}">
 
     <link rel="stylesheet" href="{{ url_for('static', filename='css/style.css') }}?v=9999" type="text/css">
     <link rel="stylesheet" href="{{ url_for('static', filename='css/nav_bar.css') }}" type="text/css">
@@ -11,7 +12,7 @@
     <link rel="stylesheet" href="{{ url_for('static', filename='css/ionicons.min.css')}}" type="text/css">
     <link rel="stylesheet" href="{{ url_for('static', filename='css/bootstrap.min.css') }}" type="text/css">
 </head>
-<body>
+<body class="bg-light">
 
 {% set header_title = 'Admin Tools' %}
 {% set header_show_back = true %}

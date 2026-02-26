@@ -1,11 +1,8 @@
 /* selection panel style */
 
-.choice-panel {
-}
-
 .choice-label {
   display: inline-block;
-  margin-top: 15px;
+  margin-top: 6px;
   vertical-align: bottom;
   list-style-type: none;
 }
@@ -72,4 +69,184 @@
   border-width: 2px;
   /*border-color: green;*/
   border-color: transparent;
+}
+
+.mobile-table-scroll {
+  width: 100%;
+  overflow-x: auto;
+}
+
+#mobile-table {
+  width: 100% !important;
+  table-layout: fixed;
+  font-size: 0.95rem;
+}
+
+#mobile-table tr {
+  height: auto;
+  line-height: 1.2;
+}
+
+#mobile-table td,
+#mobile-table th {
+  padding: 0.3rem;
+}
+
+#mobile-table .table-wrapper {
+  min-height: 56px;
+  align-items: center;
+  padding: 0.2rem;
+}
+
+#mobile-table .mobile-header {
+  width: 22vw;
+  min-width: 68px;
+  font-size: 0.82rem;
+  padding-left: 0.3rem;
+  padding-right: 0.2rem;
+  line-height: 1.1;
+  white-space: normal;
+}
+
+.mobile-content-wrap {
+  max-width: 100%;
+}
+
+.mobile-help-text {
+  font-size: 1rem;
+}
+
+.mobile-legend-list {
+  padding-left: 1rem;
+  margin-bottom: 0;
+  white-space: normal;
+  font-size: 1rem;
+}
+
+.btn-mobile-control {
+  min-width: 84px;
+}
+
+#column-pagination-controls {
+  width: 100% !important;
+  margin-left: 0 !important;
+  font-size: 1rem;
+}
+
+.choice-label .fill {
+  width: 20px;
+  height: 30px;
+}
+
+.choice-label span {
+  width: 28px;
+  height: 30px;
+  font-size: 1.15rem;
+}
+
+.mrate {
+  font-size: 2rem;
+}
+
+.choice-result {
+  width: auto;
+  margin-right: 0;
+  font-size: 1rem;
+}
+
+#mobile-table td.mobile-choice-cell {
+  text-align: center;
+  position: relative;
+  padding-top: 0.25rem;
+}
+
+#mobile-table tr:last-child th.mobile-choice-spacer {
+  width: 0 !important;
+  min-width: 0 !important;
+  padding: 0 !important;
+  border: 0 !important;
+  background: transparent !important;
+}
+
+#mobile-table td.mobile-choice-cell .choice-panel {
+  margin: 0 auto;
+  width: fit-content;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+}
+
+#mobile-table td.mobile-choice-cell .choice-label,
+#mobile-table td.mobile-choice-cell .mrate,
+#mobile-table td.mobile-choice-cell .choice-result {
+  margin-left: auto;
+  margin-right: auto;
+}
+
+#mobile-table td.mobile-choice-cell .mrate {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+#mobile-table td.mobile-choice-cell .mrate li,
+#mobile-table td.mobile-choice-cell .diff,
+#mobile-table td.mobile-choice-cell .same {
+  float: none;
+}
+
+.mobile-contact {
+  font-size: 0.95rem;
+}
+
+@media (max-width: 576px) {
+  #mobile-table {
+    font-size: 0.88rem;
+  }
+
+  #mobile-table .mobile-header {
+    width: 20vw;
+    min-width: 62px;
+    font-size: 0.76rem;
+    padding-left: 0.25rem;
+    padding-right: 0.2rem;
+  }
+
+  #mobile-table .table-wrapper {
+    min-height: 50px;
+  }
+
+  .mobile-help-text {
+    font-size: 0.95rem;
+  }
+
+  .mobile-legend-list {
+    font-size: 0.95rem;
+  }
+
+  .btn-mobile-control {
+    min-width: 72px;
+    padding-left: 0.75rem;
+    padding-right: 0.75rem;
+  }
+
+  .choice-label .fill {
+    width: 18px;
+    height: 26px;
+  }
+
+  .choice-label span {
+    width: 24px;
+    height: 26px;
+    font-size: 1rem;
+  }
+
+  .mrate {
+    font-size: 1.65rem;
+  }
+
+  #mobile-table td.mobile-choice-cell .choice-panel {
+    transform: scale(0.95);
+    transform-origin: top center;
+  }
 }

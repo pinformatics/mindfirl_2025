@@ -4,6 +4,10 @@
     height: auto;
 }
 
+.shared-nav-title-wrap {
+    min-width: 0;
+}
+
 .shared-nav-title {
     margin: 0;
     font-size: clamp(1rem, 2.4vw, 1.5rem);

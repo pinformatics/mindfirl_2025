@@ -22,21 +22,17 @@ app.secret_key = os.environ.get("FLASK_SECRET_KEY", "mindfirl_session_secret")
 # Initialize Redis connection
 redis_url = os.environ.get("REDIS_URL")
 if redis_url:
-    r = redis.Redis(
-        host='mindfirl-cache.redis.cache.windows.net',    
-        port=6380,                  
-        username='default',         
-        password=os.environ.get("REDIS_PASSWORD", None),
-        ssl=True,                  
-        decode_responses=True
-    )
+    r = redis.Redis.from_url(redis_url, decode_responses=True)
 else:
     # Local development fallback
+    redis_port = int(os.environ.get("REDIS_PORT", "6379"))
+    redis_use_tls = os.environ.get("REDIS_USE_TLS", "false").lower() == "true" or redis_port == 6380
     r = redis.Redis(
         host=os.environ.get("REDIS_HOST", "localhost"),
-        port=int(os.environ.get("REDIS_PORT", "6379")),
+        port=redis_port,
+        username=os.environ.get("REDIS_USERNAME", None),
         password=os.environ.get("REDIS_PASSWORD", None),
-        ssl=(os.environ.get("REDIS_USE_TLS", "false").lower() == "true"),
+        ssl=redis_use_tls,
         decode_responses=True
     )
 
