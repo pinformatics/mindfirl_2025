@@ -3,10 +3,19 @@
 
 import json
 import logging
+import os
+
+BASE_DIR = os.path.dirname(os.path.abspath(__file__))
+
+
+def _resolve_path(filename):
+    if os.path.isabs(filename):
+        return filename
+    return os.path.join(BASE_DIR, filename)
 
 def load_data_from_csv(filename):
     data = []
-    with open(filename, 'r') as filein:
+    with open(_resolve_path(filename), 'r') as filein:
         for line in filein:
             record = line.strip().split(',')
             new_record = []
@@ -17,7 +26,7 @@ def load_data_from_csv(filename):
 
 def load_config_settings():
     settings = {}
-    with open("data/settings.csv", 'r') as settingsin:
+    with open(_resolve_path("data/settings.csv"), 'r') as settingsin:
         for line in settingsin:
             line_data = line.strip().split(',')
             settings[line_data[0]] = line_data[1]
@@ -30,7 +39,7 @@ def save_data_to_json(filename, data):
 
 
 def get_pair(filename, pair_num):
-    filein = open(filename, 'r')
+    filein = open(_resolve_path(filename), 'r')
     ret = list()
     for line in filein:
         record = line.split(',')
