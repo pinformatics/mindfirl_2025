@@ -24,13 +24,6 @@ venv.bak/
 .RData
 .Ruserdata
 
-# Model files (large binaries)
-models/
-n2v_models/
-*.h5
-*.rds
-*.model
-
 # OS
 .DS_Store
 Thumbs.db
@@ -38,3 +31,16 @@ Thumbs.db
 # Deployment artifacts
 app.zip
 webapp_logs*.zip
+
+# Logs and caches
+*.log
+.cache/
+.pytest_cache/
+.mypy_cache/
+
+# Build outputs
+build/
+dist/
+
+# IDE/editor
+.idea/
