@@ -236,7 +236,7 @@ def _build_redis_csv_rows(filename):
             response_entries.append((key, user_id))
 
     filtered_response_keys = [entry[0] for entry in response_entries]
-    response_values = r.mget(filtered_response_keys) if filtered_response_keys else []
+    response_values = [r.get(key) for key in filtered_response_keys] if filtered_response_keys else []
 
     rows = []
 
@@ -519,7 +519,7 @@ def process_redis_data(filename):
     value_data = [[0, 0, 0, 0, 0, 0, 0] for _ in range(len(data_pairs))]
 
     if len(filename_keys) > 0:
-        filename_values = r.mget(filename_keys)
+        filename_values = [r.get(key) for key in filename_keys]
         if filename_values is None:
             filename_values = []
 
