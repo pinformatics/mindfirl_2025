@@ -6,6 +6,7 @@
 
 {% block extra_head %}
 <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/@sgratzl/chartjs-chart-boxplot"></script>
 {% endblock %}
 
 {% block content %}
@@ -19,8 +20,11 @@
             <div class="card shadow-sm">
                 <div class="card-body">
                     <div class="d-flex justify-content-between align-items-center mb-3">
-                        <h2 class="h5 mb-0">Average Reveal Level by Pair and Field</h2>
-                        <button class="btn btn-sm btn-outline-primary" type="button" data-export-target="revealLevelsChart" data-export-name="average_reveal_levels">Export PNG</button>
+                        <h2 id="revealLevelsTitle" class="h5 mb-0">Average Reveal Level by Pair and Field</h2>
+                        <div class="d-flex align-items-center gap-2">
+                            <button id="revealChartToggle" class="btn btn-sm btn-outline-secondary" type="button">Switch to Min-Max + Avg</button>
+                            <button class="btn btn-sm btn-outline-primary" type="button" data-export-target="revealLevelsChart" data-export-name="average_reveal_levels">Export PNG</button>
+                        </div>
                     </div>
                     <canvas id="revealLevelsChart" height="120"></canvas>
                 </div>
@@ -116,31 +120,237 @@ const commonPluginOptions = {
     }
 };
 
-const revealDatasets = graphData.reveal_datasets.map((dataset, index) => ({
-    label: dataset.label,
-    data: dataset.data,
-    backgroundColor: colorPalette[index % colorPalette.length]
-}));
+const revealTitleElement = document.getElementById('revealLevelsTitle');
+const revealCutoff = graphData.reveal_distribution_cutoff || 10;
+const sampleSize = graphData.student_count || 0;
+const revealChartToggle = document.getElementById('revealChartToggle');
+const boxWhiskerSupported = !!Chart.registry.getController('boxplot');
+const canUseAdaptiveBoxWhisker = sampleSize >= revealCutoff && boxWhiskerSupported;
+const revealPairLabels = graphData.reveal_pair_labels || graphData.pair_labels || [];
+const revealPairStats = graphData.reveal_pair_stats || [];
 
-new Chart(document.getElementById('revealLevelsChart'), {
-    type: 'bar',
-    data: {
-        labels: graphData.pair_labels,
-        datasets: revealDatasets
-    },
-    options: {
-        ...commonPluginOptions,
-        responsive: true,
-        scales: {
-            y: {
-                min: 0,
-                max: 2,
-                ticks: { stepSize: 0.5 },
-                title: { display: true, text: 'Reveal Level (0-2)' }
-            }
-        }
+const toCompactRevealScale = (value) => Number(value) / 2;
+const fromCompactRevealScale = (value) => (Number(value) * 2).toFixed(1).replace(/\.0$/, '');
+
+let revealLevelsChart = null;
+let currentRevealMode = canUseAdaptiveBoxWhisker ? 'box' : 'minmax';
+
+const updateRevealToggleButton = (mode) => {
+    if (!revealChartToggle) {
+        return;
     }
-});
+
+    if (!boxWhiskerSupported) {
+        revealChartToggle.disabled = true;
+        revealChartToggle.textContent = 'Box-Whisker Unavailable';
+        return;
+    }
+
+    const nextMode = mode === 'box' ? 'minmax' : 'box';
+    revealChartToggle.textContent = nextMode === 'box' ? 'Switch to Box-Whisker' : 'Switch to Min-Max + Avg';
+};
+
+const renderRevealLevelsChart = (mode) => {
+    const resolvedMode = mode === 'box' && boxWhiskerSupported ? 'box' : 'minmax';
+    currentRevealMode = resolvedMode;
+
+    if (revealLevelsChart) {
+        revealLevelsChart.destroy();
+        revealLevelsChart = null;
+    }
+
+    if (resolvedMode === 'box') {
+        if (revealTitleElement) {
+            revealTitleElement.textContent = 'Reveal Level by Pair (Box-Whisker)';
+        }
+
+        const revealDistribution = graphData.reveal_distribution || [];
+        const boxDatasets = revealDistribution.map((series, index) => {
+            const color = colorPalette[index % colorPalette.length];
+            return {
+                label: series.label,
+                data: (series.raw_values || []).map((values) => {
+                    const safeValues = values.length ? values : [0];
+                    return safeValues.map(toCompactRevealScale);
+                }),
+                backgroundColor: color + '2b',
+                borderColor: color,
+                borderWidth: 1.2,
+                categoryPercentage: 0.68,
+                barPercentage: 0.72,
+                medianColor: '#111827',
+                whiskerColor: '#111827',
+                lowerBackgroundColor: color + '33',
+                outlierColor: '#1f2937',
+                itemBackgroundColor: color,
+                itemBorderColor: color,
+                itemRadius: 2,
+                outlierRadius: 2
+            };
+        });
+
+        revealLevelsChart = new Chart(document.getElementById('revealLevelsChart'), {
+            type: 'boxplot',
+            data: {
+                labels: revealPairLabels,
+                datasets: boxDatasets
+            },
+            options: {
+                ...commonPluginOptions,
+                responsive: true,
+                plugins: {
+                    ...commonPluginOptions.plugins,
+                    legend: {
+                        display: true,
+                        position: 'top',
+                        labels: {
+                            usePointStyle: true,
+                            boxWidth: 12,
+                            padding: 14
+                        }
+                    },
+                    tooltip: {
+                        callbacks: {
+                            label: function(context) {
+                                const revealSeries = revealDistribution[context.datasetIndex] || null;
+                                const statList = revealSeries ? (revealSeries.stats || []) : [];
+                                const stat = statList[context.dataIndex] || null;
+                                if (!stat) {
+                                    return context.dataset.label;
+                                }
+                                return `min ${stat.min}, q1 ${stat.q1}, median ${stat.median}, q3 ${stat.q3}, max ${stat.max}, avg ${stat.avg}, n=${stat.count}`;
+                            }
+                        }
+                    }
+                },
+                scales: {
+                    x: {
+                        grid: {
+                            color: '#f0f0f0'
+                        }
+                    },
+                    y: {
+                        min: 0,
+                        max: 1,
+                        ticks: {
+                            stepSize: 0.25,
+                            callback: function(value) {
+                                return fromCompactRevealScale(value);
+                            }
+                        },
+                        title: { display: true, text: 'Reveal Level (0-2)' },
+                        grid: {
+                            color: '#e6e6e6'
+                        }
+                    }
+                }
+            }
+        });
+    } else {
+        if (revealTitleElement) {
+            revealTitleElement.textContent = 'Reveal Level by Pair (Min-Max + Avg)';
+        }
+
+        const minPointDatasets = [{
+            type: 'line',
+            label: 'Min',
+            statType: 'min',
+            data: revealPairStats.map((point) => Number(point.min || 0)),
+            borderColor: colorPalette[0],
+            backgroundColor: colorPalette[0],
+            showLine: false,
+            pointRadius: 5,
+            pointHoverRadius: 6,
+            pointStyle: 'circle'
+        }];
+
+        const avgPointDatasets = [{
+            type: 'line',
+            label: 'Average',
+            statType: 'avg',
+            data: revealPairStats.map((point) => Number(point.avg || 0)),
+            borderColor: colorPalette[1],
+            backgroundColor: colorPalette[1],
+            showLine: false,
+            pointRadius: 5,
+            pointHoverRadius: 6,
+            pointStyle: 'circle'
+        }];
+
+        const maxPointDatasets = [{
+            type: 'line',
+            label: 'Max',
+            statType: 'max',
+            data: revealPairStats.map((point) => Number(point.max || 0)),
+            borderColor: colorPalette[2],
+            backgroundColor: colorPalette[2],
+            showLine: false,
+            pointRadius: 5,
+            pointHoverRadius: 6,
+            pointStyle: 'circle'
+        }];
+
+        revealLevelsChart = new Chart(document.getElementById('revealLevelsChart'), {
+            type: 'line',
+            data: {
+                labels: revealPairLabels,
+                datasets: [...maxPointDatasets, ...minPointDatasets, ...avgPointDatasets]
+            },
+            options: {
+                ...commonPluginOptions,
+                responsive: true,
+                plugins: {
+                    ...commonPluginOptions.plugins,
+                    legend: {
+                        display: true,
+                        position: 'top'
+                    },
+                    tooltip: {
+                        callbacks: {
+                            label: function(context) {
+                                const stat = revealPairStats[context.dataIndex] || null;
+                                if (!stat) {
+                                    return context.dataset.label;
+                                }
+
+                                const statType = context.dataset.statType || 'range';
+                                if (statType === 'min') {
+                                    return `min: ${stat.min}`;
+                                }
+                                if (statType === 'avg') {
+                                    return `avg: ${stat.avg}`;
+                                }
+                                if (statType === 'max') {
+                                    return `max: ${stat.max}`;
+                                }
+                                return `min ${stat.min}, avg ${stat.avg}, max ${stat.max}, n=${stat.count}`;
+                            }
+                        }
+                    }
+                },
+                scales: {
+                    y: {
+                        min: 0,
+                        max: 2,
+                        ticks: { stepSize: 0.5 },
+                        title: { display: true, text: 'Reveal Level (0-2)' }
+                    }
+                }
+            }
+        });
+    }
+
+    updateRevealToggleButton(resolvedMode);
+};
+
+if (revealChartToggle) {
+    revealChartToggle.addEventListener('click', function() {
+        const targetMode = currentRevealMode === 'box' ? 'minmax' : 'box';
+        renderRevealLevelsChart(targetMode);
+    });
+}
+
+renderRevealLevelsChart(canUseAdaptiveBoxWhisker ? 'box' : 'minmax');
 
 new Chart(document.getElementById('conclusionChart'), {
     type: 'bar',

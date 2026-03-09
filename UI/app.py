@@ -1,21 +1,41 @@
+import csv
 import json
 import logging
-import time
+import os
 import secrets
-from flask import Flask, render_template, jsonify, request, make_response, Response, url_for, session
-from functools import wraps
+import time
+import uuid
 from datetime import datetime
+from functools import wraps
+from io import StringIO
+from typing import cast
 
 import redis
-import csv
-import pandas as pd
-import io
+from flask import Flask, Response, jsonify, make_response, render_template, request, session
 
 import data_loader as dl
-import data_display as dd
 import data_model as dm
-import os
-import uuid
+from admin_reporting import (
+    build_graph_payload,
+    build_redis_csv_fieldnames,
+    build_redis_csv_rows,
+    process_redis_data,
+)
+from redis_factory import create_redis_client
+from ui_constants import (
+    ADMIN_LOGIN_LOCK_SECONDS,
+    ADMIN_MAX_FAILED_ATTEMPTS,
+    DATA_PATH,
+    SECTION2_PATH,
+)
+from user_state import (
+    build_pair_reveal_levels,
+    get_pair_numbers,
+    get_partial_level_flags,
+    get_snapshot_key_for_response_key,
+    load_temp_selections,
+    save_temp_selections,
+)
 
 app = Flask(__name__)
 
@@ -24,865 +44,427 @@ if not FLASK_SECRET_KEY:
     raise RuntimeError("FLASK_SECRET_KEY environment variable is required")
 app.secret_key = FLASK_SECRET_KEY
 
-# Initialize Redis connection
-redis_url = os.environ.get("REDIS_URL")
-if redis_url:
-    r = redis.Redis.from_url(redis_url, decode_responses=True)
-else:
-    # Local development fallback
-    redis_port = int(os.environ.get("REDIS_PORT", "6379"))
-    redis_use_tls = os.environ.get("REDIS_USE_TLS", "false").lower() == "true" or redis_port == 6380
-    r = redis.Redis(
-        host=os.environ.get("REDIS_HOST", "localhost"),
-        port=redis_port,
-        username=os.environ.get("REDIS_USERNAME", None),
-        password=os.environ.get("REDIS_PASSWORD", None),
-        ssl=redis_use_tls,
-        decode_responses=True
-    )
-
-data_path = 'data/ppirl.csv'
-settings = dl.load_config_settings()
-# settings = {"privacy_budget": 80}
-# print(settings)
-
-ADMIN_PASSWORD = os.environ.get("ADMIN_PASSWORD")
-if not ADMIN_PASSWORD:
+_admin_password = os.environ.get("ADMIN_PASSWORD")
+if not _admin_password:
     raise RuntimeError("ADMIN_PASSWORD environment variable is required")
+ADMIN_PASSWORD: str = cast(str, _admin_password)
 
-same_different = {
-    "1": "Different",
-    "2": "Different",
-    "3": "Different",
-    "4": "Same",
-    "5": "Same",
-    "6": "Same"
-}
-
-high_low = {
-    "1": "High",
-    "2": "Moderate",
-    "3": "Low",
-    "4": "Low",
-    "5": "Moderate",
-    "6": "High"
-}
-
-ATTRIBUTE_COLUMNS = [
-    ("ID", "id_reveal_level"),
-    ("First Name", "first_name_reveal_level"),
-    ("Last Name", "last_name_reveal_level"),
-    ("DoB(M/D/Y)", "dob_reveal_level"),
-    ("Sex", "sex_reveal_level"),
-    ("Race", "race_reveal_level")
-]
-
-ADMIN_LOGIN_LOCK_SECONDS = 300
-ADMIN_MAX_FAILED_ATTEMPTS = 5
+r = create_redis_client()
+settings = dl.load_config_settings()
 
 
 def _get_or_create_csrf_token():
-    token = session.get('csrf_token')
+    """Return a stable CSRF token for the active session."""
+    token = session.get("csrf_token")
     if not token:
         token = secrets.token_urlsafe(32)
-        session['csrf_token'] = token
+        session["csrf_token"] = token
     return token
 
 
 @app.context_processor
 def inject_template_tokens():
-    return {
-        'csrf_token': _get_or_create_csrf_token()
-    }
+    """Expose CSRF token to all templates."""
+    return {"csrf_token": _get_or_create_csrf_token()}
 
 
 def _is_valid_csrf_request():
-    expected = session.get('csrf_token')
-    provided = request.form.get('csrf_token') or request.headers.get('X-CSRF-Token')
+    """Validate CSRF token from form or request headers."""
+    expected = session.get("csrf_token")
+    provided = request.form.get("csrf_token") or request.headers.get("X-CSRF-Token")
     if not expected or not provided:
         return False
     return secrets.compare_digest(expected, provided)
 
 
-def _temp_selection_key(user_id):
-    return '{}_temp_user_selections'.format(user_id)
+def admin_required(handler):
+    """Protect admin endpoints with password auth and CSRF checks."""
 
-
-def _load_temp_selections(user_id):
-    if not user_id:
-        return []
-    raw = r.get(_temp_selection_key(user_id))
-    parsed = _safe_parse_json(raw, [])
-    return parsed if isinstance(parsed, list) else []
-
-
-def _save_temp_selections(user_id, selections):
-    if user_id:
-        r.set(_temp_selection_key(user_id), json.dumps(selections))
-
-
-def _extract_user_id_from_response_key(key):
-    if 'id:' not in key or '___file:' not in key:
-        return None
-    return key.split('id:', 1)[1].split('___file:', 1)[0]
-
-
-def _extract_file_part_from_response_key(key):
-    if '___file:' not in key:
-        return ''
-    return key.split('___file:', 1)[1].strip()
-
-
-def _get_snapshot_key_for_response_key(response_key):
-    return response_key + '___snapshot'
-
-
-def _safe_parse_json(raw_value, default_value):
-    if not raw_value:
-        return default_value
-    try:
-        return json.loads(raw_value)
-    except (TypeError, ValueError):
-        return default_value
-
-
-def _get_response_keys_for_filename(filename):
-    candidate_keys = list(r.scan_iter('id:*___file:*'))
-    if not candidate_keys:
-        return []
-
-    requested = filename.strip()
-    requested_base = os.path.basename(requested)
-    matched = []
-
-    for key in candidate_keys:
-        file_part = _extract_file_part_from_response_key(key)
-        file_base = os.path.basename(file_part)
-
-        if (
-            file_part == requested
-            or file_base == requested_base
-            or file_part.endswith('/' + requested_base)
-            or file_part.endswith(requested)
-        ):
-            matched.append(key)
-
-    return sorted(set(matched))
-
-
-def _get_pair_numbers(data_pairs):
-    pair_numbers = []
-    for i in range(0, len(data_pairs), 2):
-        pair_numbers.append(str(data_pairs[i][0]))
-    return pair_numbers
-
-
-def _get_partial_level_flags(data_pair_list):
-    partial_flags = []
-    for pair_index in range(len(data_pair_list.get_ids()) // 2):
-        data_pair = data_pair_list.get_data_pair_by_index(pair_index)
-        attr_flags = []
-        for attr_index in range(6):
-            next_mode = data_pair.get_next_display(attr_index, 'M')[0]
-            attr_flags.append(next_mode == 'partial')
-        partial_flags.append(attr_flags)
-    return partial_flags
-
-
-def _status_to_level(status, has_partial_level):
-    if status == 'P':
-        return 1
-    if status == 'F':
-        return 2 if has_partial_level else 1
-    return 0
-
-
-def _selection_to_conclusion(selection):
-    if not selection:
-        return {
-            "conclusion_code": "",
-            "conclusion_same_different": "No Response",
-            "conclusion_confidence": ""
-        }
-
-    return {
-        "conclusion_code": selection,
-        "conclusion_same_different": same_different.get(selection, "Unknown"),
-        "conclusion_confidence": high_low.get(selection, "Unknown")
-    }
-
-
-def _selection_to_conclusion_label(selection):
-    if not selection:
-        return ""
-
-    normalized = str(selection).strip()
-    if normalized in ["1", "2", "3", "4", "5", "6"]:
-        return normalized
-    return ""
-
-
-def _build_redis_csv_rows(filename):
-    data_pairs = dl.load_data_from_csv(filename)
-    data_pair_list = dm.DataPairList(data_pairs)
-    pair_numbers = _get_pair_numbers(data_pairs)
-    partial_level_flags = _get_partial_level_flags(data_pair_list)
-
-    response_keys = _get_response_keys_for_filename(filename)
-    response_entries = []
-    for key in response_keys:
-        user_id = _extract_user_id_from_response_key(key)
-        if user_id:
-            response_entries.append((key, user_id))
-
-    filtered_response_keys = [entry[0] for entry in response_entries]
-    response_values = [r.get(key) for key in filtered_response_keys] if filtered_response_keys else []
-
-    rows = []
-
-    for student_index, (response_key, user_id) in enumerate(response_entries):
-        selection_string = response_values[student_index] or ""
-        selections = selection_string.split(',') if selection_string else []
-
-        snapshot_key = _get_snapshot_key_for_response_key(response_key)
-        snapshot = _safe_parse_json(r.get(snapshot_key), {})
-        snapshot_reveal_levels = snapshot.get('pair_reveal_levels', {})
-
-        if 'character_disclosed_percent_value' in snapshot:
-            character_disclosed_percent_value = float(snapshot.get('character_disclosed_percent_value', 0.0))
-        else:
-            disclosed_characters = int(r.get(user_id + '_mindfil_disclosed_characters') or 0)
-            total_characters = int(r.get(user_id + '_mindfil_total_characters') or 0)
-            character_disclosed_percent_value = 0.0
-            if total_characters > 0:
-                character_disclosed_percent_value = round(100.0 * disclosed_characters / total_characters, 1)
-
-        if 'privacy_risk_percent_value' in snapshot:
-            privacy_risk_percent_value = float(snapshot.get('privacy_risk_percent_value', 0.0))
-        else:
-            kapr_value = float(r.get(user_id + '_KAPR') or 0.0)
-            privacy_risk_percent_value = round(100.0 * kapr_value, 1)
-
-        row = {
-            "student_index": student_index + 1,
-            "student_id": user_id,
-            "character_disclosed_percent_value": character_disclosed_percent_value,
-            "privacy_risk_percent_value": privacy_risk_percent_value
-        }
-
-        for pair_index, pair_number in enumerate(pair_numbers):
-            pair_num = pair_index + 1
-            selection = selections[pair_index].strip() if pair_index < len(selections) else ""
-            conclusion_label = _selection_to_conclusion_label(selection)
-
-            row['pair_{}_conclusion'.format(pair_num)] = conclusion_label
-
-            snapshot_pair_levels = snapshot_reveal_levels.get(str(pair_num), [])
-
-            for attr_index, (_, column_name) in enumerate(ATTRIBUTE_COLUMNS):
-                if attr_index < len(snapshot_pair_levels):
-                    row['pair_{}_{}'.format(pair_num, column_name)] = int(snapshot_pair_levels[attr_index])
-                    continue
-
-                key_row_1 = '{}-{}-1-{}'.format(user_id, pair_number, attr_index)
-                key_row_2 = '{}-{}-2-{}'.format(user_id, pair_number, attr_index)
-
-                status_1 = r.get(key_row_1) or 'M'
-                status_2 = r.get(key_row_2) or 'M'
-
-                has_partial_level = partial_level_flags[pair_index][attr_index]
-                level_1 = _status_to_level(status_1, has_partial_level)
-                level_2 = _status_to_level(status_2, has_partial_level)
-                row['pair_{}_{}'.format(pair_num, column_name)] = max(level_1, level_2)
-
-        rows.append(row)
-
-    return rows, pair_numbers
-
-
-def _build_graph_payload(rows, pair_numbers):
-    pair_labels = ['Pair {}'.format(index + 1) for index in range(len(pair_numbers))]
-    reveal_datasets = []
-
-    for _, column_name in ATTRIBUTE_COLUMNS:
-        values = []
-        for pair_index, _ in enumerate(pair_numbers):
-            pair_num = pair_index + 1
-            key = 'pair_{}_{}'.format(pair_num, column_name)
-            if rows:
-                avg_value = sum(float(row.get(key, 0) or 0) for row in rows) / len(rows)
-            else:
-                avg_value = 0
-            values.append(round(avg_value, 2))
-
-        reveal_datasets.append({
-            'label': column_name,
-            'data': values
-        })
-
-    conclusion_labels = ['1', '2', '3', '4', '5', '6']
-    conclusion_counts = {label: 0 for label in conclusion_labels}
-    pair_conclusion_counts = {label: [0 for _ in pair_numbers] for label in conclusion_labels}
-    for row in rows:
-        for pair_index, _ in enumerate(pair_numbers):
-            pair_num = pair_index + 1
-            conclusion_key = 'pair_{}_conclusion'.format(pair_num)
-            conclusion_value = str(row.get(conclusion_key, '')).strip()
-            if conclusion_value in conclusion_counts:
-                conclusion_counts[conclusion_value] += 1
-                pair_conclusion_counts[conclusion_value][pair_index] += 1
-
-    field_level_counts = {}
-    for _, column_name in ATTRIBUTE_COLUMNS:
-        field_level_counts[column_name] = {'0': 0, '1': 0, '2': 0}
-
-    for row in rows:
-        for pair_index, _ in enumerate(pair_numbers):
-            pair_num = pair_index + 1
-            for _, column_name in ATTRIBUTE_COLUMNS:
-                key = 'pair_{}_{}'.format(pair_num, column_name)
-                raw_level = row.get(key, 0)
-                try:
-                    level = int(raw_level)
-                except (TypeError, ValueError):
-                    level = 0
-                if level < 0:
-                    level = 0
-                if level > 2:
-                    level = 2
-                field_level_counts[column_name][str(level)] += 1
-
-    student_labels = []
-    student_character_disclosed = []
-    student_privacy_risk = []
-    for row in rows:
-        student_labels.append(str(row.get('student_index', len(student_labels) + 1)))
-        student_character_disclosed.append(float(row.get('character_disclosed_percent_value', 0) or 0))
-        student_privacy_risk.append(float(row.get('privacy_risk_percent_value', 0) or 0))
-
-    if rows:
-        avg_character_disclosed = round(
-            sum(float(row.get('character_disclosed_percent_value', 0) or 0) for row in rows) / len(rows),
-            2
-        )
-        avg_privacy_risk = round(
-            sum(float(row.get('privacy_risk_percent_value', 0) or 0) for row in rows) / len(rows),
-            2
-        )
-    else:
-        avg_character_disclosed = 0
-        avg_privacy_risk = 0
-
-    return {
-        'pair_labels': pair_labels,
-        'reveal_datasets': reveal_datasets,
-        'conclusion_labels': conclusion_labels,
-        'conclusion_counts': [conclusion_counts[label] for label in conclusion_labels],
-        'pair_conclusion_datasets': [
-            {
-                'label': label,
-                'data': pair_conclusion_counts[label]
-            }
-            for label in conclusion_labels
-        ],
-        'field_level_labels': [column_name for _, column_name in ATTRIBUTE_COLUMNS],
-        'field_level_zero': [field_level_counts[column_name]['0'] for _, column_name in ATTRIBUTE_COLUMNS],
-        'field_level_one': [field_level_counts[column_name]['1'] for _, column_name in ATTRIBUTE_COLUMNS],
-        'field_level_two': [field_level_counts[column_name]['2'] for _, column_name in ATTRIBUTE_COLUMNS],
-        'student_labels': student_labels,
-        'student_character_disclosed': student_character_disclosed,
-        'student_privacy_risk': student_privacy_risk,
-        'avg_character_disclosed': avg_character_disclosed,
-        'avg_privacy_risk': avg_privacy_risk
-    }
-
-def admin_required(f):
-    @wraps(f)
+    @wraps(handler)
     def decorated_function(*args, **kwargs):
-        if not session.get('is_admin', False):
-            if request.method == 'POST':
-                now = int(time.time())
-                locked_until = int(session.get('admin_locked_until', 0) or 0)
-                if locked_until and now < locked_until:
-                    return "Admin login temporarily locked. Please wait and try again.", 429
+        if not session.get("is_admin", False) and request.method == "POST":
+            now = int(time.time())
+            locked_until = int(session.get("admin_locked_until", 0) or 0)
+            if locked_until and now < locked_until:
+                return "Admin login temporarily locked. Please wait and try again.", 429
 
-                provided_password = request.form.get('password') or ''
-                if provided_password and secrets.compare_digest(provided_password, ADMIN_PASSWORD):
-                    session['is_admin'] = True
-                    session['admin_failed_attempts'] = 0
-                    session['admin_locked_until'] = 0
-                    _get_or_create_csrf_token()
-                else:
-                    failed_attempts = int(session.get('admin_failed_attempts', 0) or 0) + 1
-                    session['admin_failed_attempts'] = failed_attempts
-                    if failed_attempts >= ADMIN_MAX_FAILED_ATTEMPTS:
-                        session['admin_locked_until'] = now + ADMIN_LOGIN_LOCK_SECONDS
-                    return "Unauthorized access. Please provide the correct admin password.", 403
+            provided_password = request.form.get("password") or ""
+            if provided_password and secrets.compare_digest(provided_password, ADMIN_PASSWORD):
+                session["is_admin"] = True
+                session["admin_failed_attempts"] = 0
+                session["admin_locked_until"] = 0
+                _get_or_create_csrf_token()
+            else:
+                failed_attempts = int(session.get("admin_failed_attempts", 0) or 0) + 1
+                session["admin_failed_attempts"] = failed_attempts
+                if failed_attempts >= ADMIN_MAX_FAILED_ATTEMPTS:
+                    session["admin_locked_until"] = now + ADMIN_LOGIN_LOCK_SECONDS
+                return "Unauthorized access. Please provide the correct admin password.", 403
 
-        if not session.get('is_admin', False):
+        if not session.get("is_admin", False):
             return "Unauthorized access. Please provide the correct admin password.", 403
 
-        if request.method == 'POST' and request.endpoint != 'admin_page' and not _is_valid_csrf_request():
+        if request.method == "POST" and request.endpoint != "admin_page" and not _is_valid_csrf_request():
             return "CSRF validation failed.", 403
-        
-        return f(*args, **kwargs)
+
+        return handler(*args, **kwargs)
+
     return decorated_function
 
-@app.route('/admin', methods=['GET', 'POST'])
+
+def _build_results_context(user_id, disclosure_setting):
+    """Initialize a user session and return data needed for results templates."""
+    data_pairs = dl.load_data_from_csv(DATA_PATH)
+    dataset = dl.load_data_from_csv(SECTION2_PATH)
+
+    data_pair_list = dm.DataPairList(data_pairs)
+    pairs_formatted = data_pair_list.get_data_display(disclosure_setting)
+    ids_list = data_pair_list.get_ids()
+    icons = data_pair_list.get_icons()[: (len(pairs_formatted) // 2)]
+
+    data = list(zip(pairs_formatted[0::2], pairs_formatted[1::2]))
+    ids = list(zip(ids_list[0::2], ids_list[1::2]))
+
+    save_temp_selections(r, user_id, ["" for _ in range(len(pairs_formatted) // 2)])
+
+    total_characters = data_pair_list.get_total_characters()
+    r.set(user_id + "_mindfil_total_characters", total_characters)
+    r.set(user_id + "_mindfil_disclosed_characters", 0)
+    r.set(user_id + "_KAPR", 0)
+
+    for id_row in ids_list:
+        for attribute_index in range(6):
+            r.set(user_id + "-" + id_row[attribute_index], "M")
+
+    delta = []
+    delta_cdp = []
+    for pair_index in range(len(pairs_formatted) // 2):
+        data_pair = data_pair_list.get_data_pair_by_index(pair_index)
+        display_status = ["M", "M", "M", "M", "M", "M"]
+        delta += dm.KAPR_delta(dataset, data_pair, display_status, len(data_pairs))
+        delta_cdp += dm.cdp_delta(data_pair, display_status, 0, total_characters)
+
+    choices_key = user_id + "_choices"
+    previous_choices = r.get(choices_key)
+    choices = json.loads(previous_choices) if previous_choices else {}
+
+    return {
+        "data": data,
+        "ids": ids,
+        "icons": icons,
+        "delta": delta,
+        "delta_cdp": delta_cdp,
+        "choices": choices,
+    }
+
+
+def _display_results_page(filename, template_name, disclosure_setting):
+    """Render an interactive results page and initialize user session keys."""
+    user_id = request.cookies.get("user_id") or str(uuid.uuid4())
+
+    try:
+        context = _build_results_context(user_id, disclosure_setting)
+    except redis.ConnectionError as exc:
+        return (
+            "Redis connection failed: {}. Configure REDIS_URL in UI/.env or run a local Redis instance."
+            .format(exc),
+            500,
+        )
+    except Exception as exc:
+        return "Can not open invalid or nonexistent file {} {} {}".format(filename, exc, os.getcwd()), 500
+
+    logging.error("display_results_page{}".format(user_id))
+
+    response = make_response(
+        render_template(
+            template_name,
+            data=context["data"],
+            ids=context["ids"],
+            title="Interactive Record Linkage",
+            icons=context["icons"],
+            delta=context["delta"],
+            delta_cdp=context["delta_cdp"],
+            mode="PPIRL",
+            choices=context["choices"],
+            marker_position=int(settings["privacy_budget"]),
+        )
+    )
+    response.set_cookie("user_id", user_id)
+    return response
+
+
+@app.route("/admin", methods=["GET", "POST"])
 @admin_required
 def admin_page():
-    return render_template('admin/dashboard.html')
+    """Render admin dashboard."""
+    return render_template("admin/dashboard.html")
 
-@app.route('/admin/download_redis_data', methods=['POST'])
+
+@app.route("/admin/download_redis_data", methods=["POST"])
 @admin_required
 def generate_redis_csv():
-    filename = 'data/ppirl.csv'
-    rows, pair_numbers = _build_redis_csv_rows(filename)
+    """Export all submitted responses and reveal levels as CSV."""
+    rows, pair_numbers = build_redis_csv_rows(r, DATA_PATH)
+    fieldnames = build_redis_csv_fieldnames(pair_numbers)
 
-    output = io.StringIO()
-    fieldnames = [
-        "student_index",
-        "student_id"
-    ]
-
-    for pair_index, _ in enumerate(pair_numbers):
-        pair_num = pair_index + 1
-        for _, column_name in ATTRIBUTE_COLUMNS:
-            fieldnames.append('pair_{}_{}'.format(pair_num, column_name))
-
-    for pair_index, _ in enumerate(pair_numbers):
-        pair_num = pair_index + 1
-        fieldnames.append('pair_{}_conclusion'.format(pair_num))
-
-    fieldnames.extend([
-        "character_disclosed_percent_value",
-        "privacy_risk_percent_value"
-    ])
-
+    output = StringIO()
     writer = csv.DictWriter(output, fieldnames=fieldnames)
     writer.writeheader()
     for row in rows:
         writer.writerow(row)
 
-    timestamp = datetime.utcnow().strftime('%Y%m%d_%H%M%S')
+    timestamp = datetime.utcnow().strftime("%Y%m%d_%H%M%S")
     return Response(
         output.getvalue(),
-        mimetype='text/csv',
-        headers={
-            'Content-Disposition': 'attachment; filename=mindfirl_report_{}.csv'.format(timestamp)
-        }
+        mimetype="text/csv",
+        headers={"Content-Disposition": "attachment; filename=mindfirl_report_{}.csv".format(timestamp)},
     )
 
 
-@app.route('/admin/export_graph', methods=['GET'])
+@app.route("/admin/export_graph", methods=["GET"])
 @admin_required
 def export_graph_view():
-    filename = 'data/ppirl.csv'
-    rows, pair_numbers = _build_redis_csv_rows(filename)
-    graph_data = _build_graph_payload(rows, pair_numbers)
-    return render_template(
-        'admin/graph.html',
-        title='Response Graphs',
-        student_count=len(rows),
-        graph_data=graph_data
-    )
-    
-@app.route('/admin/clear_redis', methods=['POST'])
+    """Render admin analytics charts derived from submission data."""
+    rows, pair_numbers = build_redis_csv_rows(r, DATA_PATH)
+    graph_data = build_graph_payload(rows, pair_numbers)
+    return render_template("admin/graph.html", title="Response Graphs", student_count=len(rows), graph_data=graph_data)
+
+
+@app.route("/admin/clear_redis", methods=["POST"])
 @admin_required
 def clear_redis():
+    """Delete all Redis keys used by the app."""
     try:
         r.flushall()
         return jsonify({"success": True, "message": "All data cleared."})
-    except redis.ConnectionError as e:
-        return jsonify({"success": False, "message": "Error clearing Redis: {0}".format(str(e))}), 500
+    except redis.ConnectionError as exc:
+        return jsonify({"success": False, "message": "Error clearing Redis: {0}".format(str(exc))}), 500
 
-@app.route('/admin/view_all_redis_data', methods=['GET'])
+
+@app.route("/admin/view_all_redis_data", methods=["GET"])
 @admin_required
 def view_all_redis_data():
+    """Render a raw key/value Redis browser for administrators."""
     try:
-        redis_items = []
-        for key in sorted(list(r.scan_iter("*"))):
-            redis_items.append({
-                "key": key,
-                "value": r.get(key)
-            })
-        return render_template('admin/redis_data.html', redis_items=redis_items)
-    except redis.ConnectionError as e:
-        return "Error connecting to Redis: {0}".format(str(e)), 500
-    
-
-def process_redis_data(filename):
-    data_pairs = dl.load_data_from_csv('data/ppirl.csv')
-
-    filename_keys = _get_response_keys_for_filename(filename)
-    html_elements_list = []
-    value_data = [[0, 0, 0, 0, 0, 0, 0] for _ in range(len(data_pairs))]
-
-    if len(filename_keys) > 0:
-        filename_values = [r.get(key) for key in filename_keys]
-        if filename_values is None:
-            filename_values = []
-
-        num_pairs = len(filename_values[0].split(','))
-        data_len = len(data_pairs) / 2
-        if num_pairs != data_len:
-            raise Exception("The lengths of the dataset and responses are not aligned")
-
-        # html_elements_list = []
-        value_data = [[0, 0, 0, 0, 0, 0, 0] for _ in range(num_pairs)]
-
-        for user_index, selection_string in enumerate(filename_values):
-            selections = selection_string.split(',')
-            for selection_index, selection in enumerate(selections):
-                if selection == '':
-                    value_data[selection_index][0] += 1
-                else:
-                    value_data[selection_index][int(selection)] += 1
-        
-
-    for selection_counts in value_data:
-        render_values = [selection_counts[1] + selection_counts[2] + selection_counts[3], selection_counts[4] + selection_counts[5] + selection_counts[6]] + \
-            [selection_counts[i] for i in range(1, 7)]
-
-        selection_element = """
-            <div id="overall" 
-            style=
-            "
-            display: flex;
-            flex-direction: column;
-            align-items: center;
-            justify-content: space-around;
-            margin-top: 4%;
-            ">
-
-                <div id="simple-breakdown" style="display: flex; flex-direction: row; justify-content: space-around; align-items: center; font-size: 1.2em; width: 80%">
-                    <div id="different-simple" style="flex: 1;">
-                        <div>Different</div>
-                        <div>{}</div>
-                    </div>
-                    <div id="same-simple" style="flex: 1">
-                        <div>Same</div>
-                        <div>{}</div>
-                    </div>
-                </div>
-                <div id="verbose-breakdown" style="display: flex; flex-direction: column; align-items: center; font-size: 0.8em; width: 100%; margin: 2%">
-                    <div id="verbose-labels" style="display: flex; flex-direction: row; justify-content: space-between; align-items: center; width: 50%">
-                        <span>H</span>
-                        <span>M</span>
-                        <span>L</span>
-                        <span>L</span>
-                        <span>M</span>
-                        <div>H</div>
-                    </div>
-                    <div id="verbose-values" style="display: inline-flex; flex-direction: row; justify-content: space-between; width: 50%">
-                        <span>{}</span>
-                        <span>{}</span>
-                        <span>{}</span>
-                        <span>{}</span>
-                        <span>{}</span>
-                        <span>{}</span>
-                    </div>
-                </div>
-            </div>
-        """.format(*render_values)
-
-        html_elements_list.append(selection_element)
-
-    return data_pairs, html_elements_list
-
-'''
-    for record_index, value in enumerate(filename_values):
-        print(value)
-        selection_counts = [0] * 7
-        selections = value.split(',')
-        print(selections)
-
-        for selection_index, selection in enumerate(selections):
-            if selection == '':
-                selection_counts[0] += 1
-            else:
-                selection_counts[int(selection)] += 1
-    
-        
-'''
+        redis_items = [{"key": key, "value": r.get(key)} for key in sorted(list(r.scan_iter("*")))]
+        return render_template("admin/redis_data.html", redis_items=redis_items)
+    except redis.ConnectionError as exc:
+        return "Error connecting to Redis: {0}".format(str(exc)), 500
 
 
-@app.route('/favicon.ico')
+@app.route("/favicon.ico")
 def favicon():
-    return '', 204  # No Content
+    """Avoid unnecessary favicon 404s."""
+    return "", 204
 
-def _display_results_page(filename, template_name, disclosure_setting):
-    user_id = request.cookies.get("user_id")
 
-    if not user_id:
-        user_id = str(uuid.uuid4())
-
-    try:
-        data_pairs = dl.load_data_from_csv('data/ppirl.csv')
-        dataset = dl.load_data_from_csv('data/section2.csv')
-
-        data_pair_list = dm.DataPairList(data_pairs)
-        pairs_formatted = data_pair_list.get_data_display(disclosure_setting)
-        title = 'Interactive Record Linkage'
-        data = list(zip(pairs_formatted[0::2], pairs_formatted[1::2]))
-        ids_list = data_pair_list.get_ids()
-        icons = data_pair_list.get_icons()[:(len(pairs_formatted) // 2)]
-        user_selections = [""] * (len(pairs_formatted) // 2)
-        _save_temp_selections(user_id, user_selections)
-        ids = list(zip(ids_list[0::2], ids_list[1::2]))
-
-        total_characters = data_pair_list.get_total_characters()
-        mindfil_total_characters_key = user_id + '_mindfil_total_characters'
-        r.set(mindfil_total_characters_key, total_characters)
-        mindfil_disclosed_characters_key = user_id + '_mindfil_disclosed_characters'
-        r.set(mindfil_disclosed_characters_key, 0)
-        KAPR_key = user_id + '_KAPR'
-        r.set(KAPR_key, 0)
-
-        for id1 in ids_list:
-            for i in range(6):
-                key = user_id + '-' + id1[i]
-                r.set(key, 'M')
-
-        delta = []
-        delta_cdp = []
-        for i in range(len(pairs_formatted) // 2):
-            data_pair = data_pair_list.get_data_pair_by_index(i)
-            delta += dm.KAPR_delta(dataset, data_pair, ['M', 'M', 'M', 'M', 'M', 'M'], len(data_pairs))
-            delta_cdp += dm.cdp_delta(data_pair, ['M', 'M', 'M', 'M', 'M', 'M'], 0, total_characters)
-
-        choices_key = user_id + '_choices'
-        previous_choices = r.get(choices_key)
-        choices = json.loads(previous_choices) if previous_choices else {}
-
-    except Exception as e:
-        return "Can not open invalid or nonexistent file {} {} {}".format(filename, e, os.getcwd()), 500
-    
-    logging.error("display_results_page{}".format(user_id))
-
-    response = make_response(render_template(template_name, data=data, ids=ids, title="Interactive Record Linkage", icons=icons, delta=delta, delta_cdp=delta_cdp, mode="PPIRL", choices=choices, marker_position=int(settings["privacy_budget"])))
-    
-    response.set_cookie("user_id", user_id)
-    return response
-
-# def default_display(screen_width):
-#     return display_results_page("data/ppirl.csv", screen_width)
-
-@app.route('/')
+@app.route("/")
 def index():
-    # Just serves the base page with JavaScript
-    return render_template('landing.html', title="MiNDFIRL")
+    """Serve the landing page."""
+    return render_template("landing.html", title="MiNDFIRL")
 
-@app.route('/disclosing_desktop')
+
+@app.route("/disclosing_desktop")
 def disclosing_desktop():
-    return _display_results_page("data/ppirl.csv", "desktop_base/base.html", "full")
+    """Serve desktop UI with full disclosure mode."""
+    return _display_results_page(DATA_PATH, "desktop_base/base.html", "full")
 
-@app.route('/mobile')
+
+@app.route("/mobile")
 def mobile():
-    return _display_results_page("data/ppirl.csv", "mobile_base/mobile.html", "full")
+    """Serve mobile UI with full disclosure mode."""
+    return _display_results_page(DATA_PATH, "mobile_base/mobile.html", "full")
 
-@app.route('/privacy_desktop')
+
+@app.route("/privacy_desktop")
 def privacy_desktop():
-    return _display_results_page("data/ppirl.csv", "desktop_privacypreserving/base_privacy.html", "masked")
+    """Serve desktop UI with privacy-preserving display mode."""
+    return _display_results_page(DATA_PATH, "desktop_privacypreserving/base_privacy.html", "masked")
 
-@app.route('/admin/results')
+
+@app.route("/admin/results")
 @admin_required
 def results_template():
-    filename = "data/ppirl.csv"
+    """Render results page with aggregate selection breakdowns."""
     try:
-        data_pairs, selection_html_elements = process_redis_data(filename)
-        
-        DATA_PAIR_LIST = dm.DataPairList(data_pairs)
-        pairs_formatted = DATA_PAIR_LIST.get_data_display('full')
-        title = 'Interactive Record Linkage Results'
+        data_pairs, selection_html_elements = process_redis_data(r, DATA_PATH)
+
+        data_pair_list = dm.DataPairList(data_pairs)
+        pairs_formatted = data_pair_list.get_data_display("full")
         data = list(zip(pairs_formatted[0::2], pairs_formatted[1::2]))
-        ids_list = DATA_PAIR_LIST.get_ids()
-        icons = DATA_PAIR_LIST.get_icons()[:(len(pairs_formatted) // 2)]
+        ids_list = data_pair_list.get_ids()
+        icons = data_pair_list.get_icons()[: (len(pairs_formatted) // 2)]
         ids = list(zip(ids_list[0::2], ids_list[1::2]))
 
-        return render_template("results/results_base.html", data=data, ids=ids, title=title, icons=icons, results_selections=selection_html_elements)
-    except Exception as e:
-        return "Can not open invalid or nonexistent file {} {}".format(filename, e), 500
+        return render_template(
+            "results/results_base.html",
+            data=data,
+            ids=ids,
+            title="Interactive Record Linkage Results",
+            icons=icons,
+            results_selections=selection_html_elements,
+        )
+    except Exception as exc:
+        return "Can not open invalid or nonexistent file {} {}".format(DATA_PATH, exc), 500
 
-@app.route('/update_selection', methods=['POST'])
+
+@app.route("/update_selection", methods=["POST"])
 def update_selection():
+    """Update one temporary selection for the active user."""
     user_id = request.cookies.get("user_id")
     if not user_id:
         return jsonify(success=False, error="No User ID"), 400
 
-    data = request.get_json()
-    button_id = data['id']
-    a_pos = button_id.find('a')
+    payload = request.get_json()
+    button_id = payload["id"]
+    a_pos = button_id.find("a")
     index = int(button_id[1:a_pos])
-    selection = button_id[a_pos + 1:]
+    selection = button_id[a_pos + 1 :]
 
-    user_selections = _load_temp_selections(user_id)
+    user_selections = load_temp_selections(r, user_id)
     if not user_selections:
-        pair_count = len(dl.load_data_from_csv('data/ppirl.csv')) // 2
-        user_selections = [""] * pair_count
+        pair_count = len(dl.load_data_from_csv(DATA_PATH)) // 2
+        user_selections = ["" for _ in range(pair_count)]
 
     if index < 0 or index >= len(user_selections):
         return jsonify(success=False, error="Invalid pair index"), 400
 
     user_selections[index] = selection
-    _save_temp_selections(user_id, user_selections)
+    save_temp_selections(r, user_id, user_selections)
     return jsonify(success=True)
 
-@app.route('/submit_selections', methods=['POST'])
+
+@app.route("/submit_selections", methods=["POST"])
 def submit_selections():
+    """Validate and persist final selections for the active user."""
     user_id = request.cookies.get("user_id")
     if not user_id:
         return jsonify(success=False, error="No User ID"), 400
-        # user_id = "no_user_id"
 
-    user_selections = _load_temp_selections(user_id)
-
+    user_selections = load_temp_selections(r, user_id)
     if not user_selections:
-        return jsonify(success=False, error="No responses found for this session. Please answer all pairs before submitting."), 400
+        return jsonify(
+            success=False,
+            error="No responses found for this session. Please answer all pairs before submitting.",
+        ), 400
 
     missing_pairs = [index + 1 for index, value in enumerate(user_selections) if not str(value).strip()]
     if missing_pairs:
         return jsonify(
             success=False,
-            error="Please answer all pairs before submitting. Missing pair(s): {}".format(', '.join(map(str, missing_pairs)))
+            error="Please answer all pairs before submitting. Missing pair(s): {}".format(
+                ", ".join(map(str, missing_pairs))
+            ),
         ), 400
-    
-    response_key = "id:" + user_id + "___file:" + data_path
-    r.set(response_key, ','.join(user_selections))
 
-    current_data_pairs = dl.load_data_from_csv('data/ppirl.csv')
+    response_key = "id:" + user_id + "___file:" + DATA_PATH
+    r.set(response_key, ",".join(user_selections))
+
+    current_data_pairs = dl.load_data_from_csv(DATA_PATH)
     current_data_pair_list = dm.DataPairList(current_data_pairs)
-    pair_numbers = _get_pair_numbers(current_data_pairs)
-    partial_level_flags = _get_partial_level_flags(current_data_pair_list)
+    pair_numbers = get_pair_numbers(current_data_pairs)
+    partial_level_flags = get_partial_level_flags(current_data_pair_list)
+    pair_reveal_levels = build_pair_reveal_levels(r, user_id, pair_numbers, partial_level_flags)
 
-    pair_reveal_levels = {}
-    for pair_index, pair_number in enumerate(pair_numbers):
-        pair_num = pair_index + 1
-        attr_levels = []
-        for attr_index in range(6):
-            key_row_1 = '{}-{}-1-{}'.format(user_id, pair_number, attr_index)
-            key_row_2 = '{}-{}-2-{}'.format(user_id, pair_number, attr_index)
-
-            status_1 = r.get(key_row_1) or 'M'
-            status_2 = r.get(key_row_2) or 'M'
-
-            has_partial_level = partial_level_flags[pair_index][attr_index]
-            level_1 = _status_to_level(status_1, has_partial_level)
-            level_2 = _status_to_level(status_2, has_partial_level)
-            attr_levels.append(max(level_1, level_2))
-
-        pair_reveal_levels[str(pair_num)] = attr_levels
-
-    disclosed_characters = int(r.get(user_id + '_mindfil_disclosed_characters') or 0)
-    total_characters = int(r.get(user_id + '_mindfil_total_characters') or 0)
+    disclosed_characters = int(r.get(user_id + "_mindfil_disclosed_characters") or 0)
+    total_characters = int(r.get(user_id + "_mindfil_total_characters") or 0)
     character_disclosed_percent_value = 0.0
     if total_characters > 0:
         character_disclosed_percent_value = round(100.0 * disclosed_characters / total_characters, 1)
 
-    kapr_value = float(r.get(user_id + '_KAPR') or 0.0)
+    kapr_value = float(r.get(user_id + "_KAPR") or 0.0)
     privacy_risk_percent_value = round(100.0 * kapr_value, 1)
 
     snapshot = {
-        'pair_reveal_levels': pair_reveal_levels,
-        'character_disclosed_percent_value': character_disclosed_percent_value,
-        'privacy_risk_percent_value': privacy_risk_percent_value,
-        'saved_at': datetime.utcnow().isoformat()
+        "pair_reveal_levels": pair_reveal_levels,
+        "character_disclosed_percent_value": character_disclosed_percent_value,
+        "privacy_risk_percent_value": privacy_risk_percent_value,
+        "saved_at": datetime.utcnow().isoformat(),
     }
-    r.set(_get_snapshot_key_for_response_key(response_key), json.dumps(snapshot))
+    r.set(get_snapshot_key_for_response_key(response_key), json.dumps(snapshot))
 
     logging.error("submit_selections{}".format(user_id))
     return jsonify(success=True)
 
 
-@app.route('/get_cell', methods=['GET', 'POST'])
+@app.route("/get_cell", methods=["GET", "POST"])
 def open_cell():
-    id1 = request.args.get('id1')
-    id2 = request.args.get('id2')
-    mode = request.args.get('mode')
+    """Reveal the next level for a cell and return updated privacy metrics."""
+    id1 = request.args.get("id1")
+    mode = request.args.get("mode")
 
-    pair_num = str(id1.split('-')[0])
-    attr_num = str(id1.split('-')[2])
-
+    pair_num = str(id1.split("-")[0])
+    attr_num = str(id1.split("-")[2])
     pair_id = int(pair_num)
     attr_id = int(attr_num)
 
-    data_pairs = dl.load_data_from_csv('data/ppirl.csv')
-    dataset = dl.load_data_from_csv('data/section2.csv')
+    data_pairs = dl.load_data_from_csv(DATA_PATH)
+    dataset = dl.load_data_from_csv(SECTION2_PATH)
     data_pair_list = dm.DataPairList(data_pairs)
-
     pair = data_pair_list.get_data_pair(pair_id)
     assert pair is not None, "pair of DATA_PAIR_LIST is null"
-
-    attr = pair.get_attributes(attr_id)
-    attr1 = attr[0]
-    attr2 = attr[1]
-    helper = pair.get_helpers(attr_id)
-    helper1 = helper[0]
-    helper2 = helper[1]
 
     attr_display_next = pair.get_next_display(attr_id=attr_id, attr_mode=mode)
     ret = {"value1": attr_display_next[1][0], "value2": attr_display_next[1][1], "mode": attr_display_next[0]}
 
-
     cdp_previous = pair.get_character_disclosed_num(1, attr_id, mode) + pair.get_character_disclosed_num(2, attr_id, mode)
-    cdp_post = pair.get_character_disclosed_num(1, attr_id, ret['mode']) + pair.get_character_disclosed_num(2, attr_id, ret['mode'])
+    cdp_post = pair.get_character_disclosed_num(1, attr_id, ret["mode"]) + pair.get_character_disclosed_num(
+        2, attr_id, ret["mode"]
+    )
     cdp_increment = cdp_post - cdp_previous
 
     user_id = request.cookies.get("user_id")
-    mindfil_disclosed_characters_key = user_id + '_mindfil_disclosed_characters'
+    mindfil_disclosed_characters_key = user_id + "_mindfil_disclosed_characters"
     r.incrby(mindfil_disclosed_characters_key, cdp_increment)
-    mindfil_total_characters_key = user_id + '_mindfil_total_characters'
+    mindfil_total_characters_key = user_id + "_mindfil_total_characters"
     cdp = 100.0 * int(r.get(mindfil_disclosed_characters_key)) / int(r.get(mindfil_total_characters_key))
-    print(cdp)
-    ret['cdp'] = round(cdp, 1)
+    ret["cdp"] = round(cdp, 1)
 
     old_display_status1 = []
     old_display_status2 = []
-    key1_prefix = user_id + '-' + pair_num + '-1-'
-    key2_prefix = user_id + '-' + pair_num + '-2-'
+    key1_prefix = user_id + "-" + pair_num + "-1-"
+    key2_prefix = user_id + "-" + pair_num + "-2-"
     for attr_i in range(6):
         old_display_status1.append(r.get(key1_prefix + str(attr_i)))
         old_display_status2.append(r.get(key2_prefix + str(attr_i)))
 
-    key1 = user_id + '-' + pair_num + '-1-' + attr_num
-    key2 = user_id + '-' + pair_num + '-2-' + attr_num
-    if ret['mode'] == 'full':
-        r.set(key1, 'F')
-        r.set(key2, 'F')
-    elif ret['mode'] == 'partial':
-        r.set(key1, 'P')
-        r.set(key2, 'P')
-    else:
-        pass
+    key1 = user_id + "-" + pair_num + "-1-" + attr_num
+    key2 = user_id + "-" + pair_num + "-2-" + attr_num
+    if ret["mode"] == "full":
+        r.set(key1, "F")
+        r.set(key2, "F")
+    elif ret["mode"] == "partial":
+        r.set(key1, "P")
+        r.set(key2, "P")
 
     display_status1 = []
     display_status2 = []
     for attr_i in range(6):
         display_status1.append(r.get(key1_prefix + str(attr_i)))
         display_status2.append(r.get(key2_prefix + str(attr_i)))
-    
-    M = len(data_pairs)
-    
-    old_KAPR = dm.get_KAPR_for_dp(dataset, pair, old_display_status1, M)
-    KAPR = dm.get_KAPR_for_dp(dataset, pair, display_status1, M)
 
-    KAPRINC = KAPR - old_KAPR
-    KAPR_key = user_id + '_KAPR'
-    overall_KAPR = float(r.get(KAPR_key) or 0)
-    overall_KAPR += KAPRINC
-    
-    r.incrbyfloat(KAPR_key, KAPRINC)
-    ret['KAPR'] = round(100 * overall_KAPR, 1)
+    data_size = len(data_pairs)
+    old_kapr = dm.get_KAPR_for_dp(dataset, pair, old_display_status1, data_size)
+    kapr = dm.get_KAPR_for_dp(dataset, pair, display_status1, data_size)
+    kapr_increment = kapr - old_kapr
 
-    new_delta_list = dm.KAPR_delta(dataset, pair, display_status1, M)
-    ret['new_delta'] = new_delta_list
+    kapr_key = user_id + "_KAPR"
+    overall_kapr = float(r.get(kapr_key) or 0) + kapr_increment
+    r.incrbyfloat(kapr_key, kapr_increment)
+    ret["KAPR"] = round(100 * overall_kapr, 1)
 
-    new_delta_cdp_list = dm.cdp_delta(pair, display_status1, int(r.get(mindfil_disclosed_characters_key)), int(r.get(mindfil_total_characters_key)))
-    ret['new_delta_cdp'] = new_delta_cdp_list
+    ret["new_delta"] = dm.KAPR_delta(dataset, pair, display_status1, data_size)
+    ret["new_delta_cdp"] = dm.cdp_delta(
+        pair,
+        display_status1,
+        int(r.get(mindfil_disclosed_characters_key)),
+        int(r.get(mindfil_total_characters_key)),
+    )
 
     logging.error("open_cell{}".format(user_id))
     return jsonify(ret)
 
-if __name__ == '__main__':
-    port = int(os.environ.get('PORT', 5000))
-    app.run(host='0.0.0.0', port=port)
+
+if __name__ == "__main__":
+    port = int(os.environ.get("PORT", 5000))
+    app.run(host="0.0.0.0", port=port)
