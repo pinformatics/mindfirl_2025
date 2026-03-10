@@ -17,64 +17,95 @@
 
     <div class="row g-4">
         <div class="col-12">
-            <div class="card shadow-sm">
+            <div class="card shadow-sm h-100">
+                <div class="card-body position-relative">
+                    <div class="d-flex justify-content-between align-items-center mb-3">
+                        <h2 class="h5 mb-0">Privacy-Utility Frontier (Pair Level)</h2>
+                        <button class="btn btn-sm btn-outline-primary" type="button" data-export-target="privacyUtilityFrontierChart" data-export-name="privacy_utility_frontier">Export PNG</button>
+                    </div>
+                    <canvas id="privacyUtilityFrontierChart" height="190"></canvas>
+                </div>
+            </div>
+        </div>
+
+        <div class="col-12">
+            <div class="card shadow-sm h-100">
                 <div class="card-body">
+                    <div class="d-flex justify-content-between align-items-center mb-3">
+                        <h2 class="h5 mb-0">Budget Efficiency Summary</h2>
+                        <button class="btn btn-sm btn-outline-primary" type="button" data-export-target="budgetEfficiencyChart" data-export-name="budget_efficiency_summary">Export PNG</button>
+                    </div>
+                    <canvas id="budgetEfficiencyChart" height="190"></canvas>
+                </div>
+            </div>
+        </div>
+
+        <div class="col-12">
+            <div class="card shadow-sm h-100">
+                <div class="card-body">
+                    <div class="d-flex justify-content-between align-items-center mb-3">
+                        <h2 class="h5 mb-0">Field Disclosure Contribution</h2>
+                        <button class="btn btn-sm btn-outline-primary" type="button" data-export-target="fieldContributionChart" data-export-name="field_disclosure_contribution">Export PNG</button>
+                    </div>
+                    <canvas id="fieldContributionChart" height="170"></canvas>
+                </div>
+            </div>
+        </div>
+
+        <div class="col-12">
+            <div class="card shadow-sm h-100">
+                <div class="card-body">
+                    <div class="d-flex justify-content-between align-items-center mb-3">
+                        <h2 class="h5 mb-0">Reviewer Strategy Profiles (Disclosure vs Risk)</h2>
+                        <div class="d-flex align-items-center gap-2">
+                            <div class="btn-group btn-group-sm" role="group" aria-label="Respondent metric toggle">
+                                <button id="respondentToggleDisclosed" type="button" class="btn btn-outline-success active">Disclosure Budget Use (%)</button>
+                                <button id="respondentToggleRisk" type="button" class="btn btn-outline-danger">KAPR Risk (%)</button>
+                            </div>
+                            <button class="btn btn-sm btn-outline-primary" type="button" data-export-target="studentScoreChart" data-export-name="student_scores">Export PNG</button>
+                        </div>
+                    </div>
+                    <canvas id="studentScoreChart" height="170"></canvas>
+                </div>
+            </div>
+        </div>
+
+        <div class="col-12">
+            <div class="card shadow-sm h-100">
+                <div class="card-body">
+                    <div class="d-flex justify-content-between align-items-center mb-3">
+                        <h2 class="h5 mb-0">Response Distribution by Pair Difficulty</h2>
+                        <button class="btn btn-sm btn-outline-primary" type="button" data-export-target="difficultyResponseChart" data-export-name="response_by_difficulty">Export PNG</button>
+                    </div>
+                    <canvas id="difficultyResponseChart" height="150"></canvas>
+                </div>
+            </div>
+        </div>
+
+        <div class="col-12">
+            <div class="card shadow-sm h-100">
+                <div class="card-body">
+                    <div class="d-flex justify-content-between align-items-center mb-3">
+                        <h2 class="h5 mb-0">Response Distribution by Pair (1-6)</h2>
+                        <button class="btn btn-sm btn-outline-primary" type="button" data-export-target="responseChart" data-export-name="response_distribution">Export PNG</button>
+                    </div>
+                    <canvas id="responseChart" height="150"></canvas>
+                </div>
+            </div>
+        </div>
+
+        <div class="col-12">
+            <div class="card shadow-sm">
+                <div class="card-body position-relative">
                     <div class="d-flex justify-content-between align-items-center mb-3">
                         <h2 id="revealLevelsTitle" class="h5 mb-0">Average Reveal Level by Pair and Field</h2>
                         <div class="d-flex align-items-center gap-2">
-                            <button id="revealChartToggle" class="btn btn-sm btn-outline-secondary" type="button">Switch to Min-Max + Avg</button>
                             <button class="btn btn-sm btn-outline-primary" type="button" data-export-target="revealLevelsChart" data-export-name="average_reveal_levels">Export PNG</button>
                         </div>
                     </div>
-                    <canvas id="revealLevelsChart" height="120"></canvas>
-                </div>
-            </div>
-        </div>
-
-        <div class="col-12">
-            <div class="card shadow-sm">
-                <div class="card-body">
-                    <div class="d-flex justify-content-between align-items-center mb-3">
-                        <h2 class="h5 mb-0">Reveal-Level Distribution by Field (0/1/2)</h2>
-                        <button class="btn btn-sm btn-outline-primary" type="button" data-export-target="fieldRevealDistributionChart" data-export-name="reveal_distribution">Export PNG</button>
+                    <canvas id="revealLevelsChart" height="130"></canvas>
+                    <div id="pairHoverDetails" class="position-absolute start-0 top-0 border bg-white shadow rounded-2 p-2 small d-none pe-none" style="z-index:30;">
                     </div>
-                    <canvas id="fieldRevealDistributionChart" height="120"></canvas>
-                </div>
-            </div>
-        </div>
-
-        <div class="col-12 col-lg-7">
-            <div class="card shadow-sm h-100">
-                <div class="card-body">
-                    <div class="d-flex justify-content-between align-items-center mb-3">
-                        <h2 class="h5 mb-0">Conclusion Distribution by Pair (1-6)</h2>
-                        <button class="btn btn-sm btn-outline-primary" type="button" data-export-target="conclusionChart" data-export-name="conclusion_distribution">Export PNG</button>
-                    </div>
-                    <canvas id="conclusionChart" height="160"></canvas>
-                </div>
-            </div>
-        </div>
-
-        <div class="col-12 col-lg-5">
-            <div class="card shadow-sm h-100">
-                <div class="card-body">
-                    <div class="d-flex justify-content-between align-items-center mb-3">
-                        <h2 class="h5 mb-0">Average Score Metrics</h2>
-                        <button class="btn btn-sm btn-outline-primary" type="button" data-export-target="scoreChart" data-export-name="average_scores">Export PNG</button>
-                    </div>
-                    <canvas id="scoreChart" height="160"></canvas>
-                </div>
-            </div>
-        </div>
-
-        <div class="col-12">
-            <div class="card shadow-sm">
-                <div class="card-body">
-                    <div class="d-flex justify-content-between align-items-center mb-3">
-                        <h2 class="h5 mb-0">Per-Student Score Metrics</h2>
-                        <button class="btn btn-sm btn-outline-primary" type="button" data-export-target="studentScoreChart" data-export-name="student_scores">Export PNG</button>
-                    </div>
-                    <canvas id="studentScoreChart" height="120"></canvas>
                 </div>
             </div>
         </div>
@@ -97,6 +128,59 @@ const graphData = JSON.parse(payloadElement.textContent || '{}');
 const colorPalette = [
     '#2563eb', '#16a34a', '#f59e0b', '#dc2626', '#7c3aed', '#0891b2'
 ];
+
+const responseLabelsByCode = {
+    '1': 'Highly Likely Different',
+    '2': 'Moderately Likely Different',
+    '3': 'Less Likely Different',
+    '4': 'Less Likely Same',
+    '5': 'Moderately Likely Same',
+    '6': 'Highly Likely Same'
+};
+
+const responseColorsByCode = {
+    '1': '#b91c1c',
+    '2': '#ef4444',
+    '3': '#fecaca',
+    '4': '#bbf7d0',
+    '5': '#4ade80',
+    '6': '#15803d'
+};
+
+const getSortedIndicesByWeightedResponse = (labels, responseDatasets) => {
+    const safeLabels = labels || [];
+    const safeDatasets = responseDatasets || [];
+    if (!safeLabels.length || !safeDatasets.length) {
+        return [];
+    }
+
+    const weighted = safeLabels.map((_, pairIndex) => {
+        let total = 0;
+        let weightedSum = 0;
+        safeDatasets.forEach((dataset) => {
+            const code = Number(dataset.label);
+            const count = Number((dataset.data || [])[pairIndex] || 0);
+            if (!Number.isNaN(code) && count > 0) {
+                total += count;
+                weightedSum += code * count;
+            }
+        });
+        const score = total > 0 ? weightedSum / total : 0;
+        return { pairIndex, score, total };
+    });
+
+    weighted.sort((a, b) => {
+        if (b.score !== a.score) {
+            return b.score - a.score;
+        }
+        if (b.total !== a.total) {
+            return b.total - a.total;
+        }
+        return a.pairIndex - b.pairIndex;
+    });
+
+    return weighted.map((item) => item.pairIndex);
+};
 
 const canvasBackgroundPlugin = {
     id: 'canvasBackgroundPlugin',
@@ -121,335 +205,678 @@ const commonPluginOptions = {
 };
 
 const revealTitleElement = document.getElementById('revealLevelsTitle');
-const revealCutoff = graphData.reveal_distribution_cutoff || 10;
-const sampleSize = graphData.student_count || 0;
-const revealChartToggle = document.getElementById('revealChartToggle');
 const boxWhiskerSupported = !!Chart.registry.getController('boxplot');
-const canUseAdaptiveBoxWhisker = sampleSize >= revealCutoff && boxWhiskerSupported;
 const revealPairLabels = graphData.reveal_pair_labels || graphData.pair_labels || [];
 const revealPairStats = graphData.reveal_pair_stats || [];
+const pairRecordDetails = graphData.pair_record_details || [];
+const pairHoverDetails = document.getElementById('pairHoverDetails');
+
+if (pairHoverDetails) {
+    pairHoverDetails.style.position = 'absolute';
+    pairHoverDetails.style.zIndex = '20';
+    pairHoverDetails.style.maxWidth = 'calc(100% - 32px)';
+    pairHoverDetails.style.left = '16px';
+    pairHoverDetails.style.top = '62px';
+}
 
 const toCompactRevealScale = (value) => Number(value) / 2;
 const fromCompactRevealScale = (value) => (Number(value) * 2).toFixed(1).replace(/\.0$/, '');
+const pairFieldLabels = ['ID', 'FFreq', 'First Name', 'Last Name', 'LFreq', 'DoB', 'Sex', 'Race'];
+const pairFieldKeys = ['id', 'ffreq', 'first_name', 'last_name', 'lfreq', 'dob', 'sex', 'race'];
+
+const escapeHtml = (value) => String(value || '')
+    .replace(/&/g, '&amp;')
+    .replace(/</g, '&lt;')
+    .replace(/>/g, '&gt;')
+    .replace(/"/g, '&quot;')
+    .replace(/'/g, '&#39;');
 
 let revealLevelsChart = null;
-let currentRevealMode = canUseAdaptiveBoxWhisker ? 'box' : 'minmax';
+let hoveredPairIndex = null;
+let highlightedPairIndex = null;
 
-const updateRevealToggleButton = (mode) => {
-    if (!revealChartToggle) {
+const setHighlightedPairIndex = (pairIndex) => {
+    const normalized = Number.isInteger(pairIndex) ? pairIndex : null;
+    if (highlightedPairIndex === normalized) {
         return;
     }
 
-    if (!boxWhiskerSupported) {
-        revealChartToggle.disabled = true;
-        revealChartToggle.textContent = 'Box-Whisker Unavailable';
+    highlightedPairIndex = normalized;
+    if (revealLevelsChart) {
+        revealLevelsChart.update('none');
+    }
+};
+
+const renderPairHoverDetails = (pairIndex) => {
+    if (!pairHoverDetails) {
         return;
     }
 
-    const nextMode = mode === 'box' ? 'minmax' : 'box';
-    revealChartToggle.textContent = nextMode === 'box' ? 'Switch to Box-Whisker' : 'Switch to Min-Max + Avg';
+    const pairData = pairRecordDetails[pairIndex];
+    if (!pairData) {
+        pairHoverDetails.classList.add('d-none');
+        return;
+    }
+
+    const recordA = pairData.record_a || {};
+    const recordB = pairData.record_b || {};
+    const columnHeaders = pairFieldLabels.map((label) => `<th class="text-nowrap fw-semibold p-0 px-1 align-top">${escapeHtml(label)}</th>`).join('');
+    const rowA = pairFieldKeys.map((key) => `<td class="text-nowrap p-0 px-1 align-top">${escapeHtml(recordA[key])}</td>`).join('');
+    const rowB = pairFieldKeys.map((key) => `<td class="text-nowrap p-0 px-1 align-top">${escapeHtml(recordB[key])}</td>`).join('');
+
+    pairHoverDetails.innerHTML = `
+        <div class="d-flex align-items-center gap-2 text-nowrap mb-1">
+            <span class="badge bg-secondary small">${escapeHtml(pairData.pair_label || `Pair ${pairIndex + 1}`)}</span>
+            <span class="text-muted small">#${escapeHtml(pairData.pair_number || pairIndex + 1)}</span>
+        </div>
+        <div class="overflow-hidden">
+            <table class="table table-sm table-borderless mb-0 small">
+                <thead>
+                    <tr>
+                        <th class="text-nowrap fw-semibold p-0 px-1 align-top">Record</th>
+                        ${columnHeaders}
+                    </tr>
+                </thead>
+                <tbody>
+                    <tr>
+                        <th class="text-nowrap fw-semibold p-0 px-1 align-top">A</th>
+                        ${rowA}
+                    </tr>
+                    <tr>
+                        <th class="text-nowrap fw-semibold p-0 px-1 align-top">B</th>
+                        ${rowB}
+                    </tr>
+                </tbody>
+            </table>
+        </div>
+    `;
+    pairHoverDetails.classList.remove('d-none');
+};
+
+const positionPairHoverOverlay = (event) => {
+    if (!pairHoverDetails || !pairHoverDetails.parentElement) {
+        return;
+    }
+
+    const containerRect = pairHoverDetails.parentElement.getBoundingClientRect();
+    const nativeEvent = event && event.native ? event.native : null;
+
+    let left = 16;
+    let top = 62;
+
+    if (nativeEvent && typeof nativeEvent.clientX === 'number' && typeof nativeEvent.clientY === 'number') {
+        left = nativeEvent.clientX - containerRect.left + 12;
+        top = nativeEvent.clientY - containerRect.top - 10;
+    }
+
+    pairHoverDetails.style.left = `${Math.max(12, left)}px`;
+    pairHoverDetails.style.top = `${Math.max(56, top)}px`;
+
+    const maxLeft = (pairHoverDetails.parentElement.clientWidth || 0) - (pairHoverDetails.offsetWidth || 0) - 12;
+    if (maxLeft > 12) {
+        const clampedLeft = Math.min(Math.max(12, left), maxLeft);
+        pairHoverDetails.style.left = `${clampedLeft}px`;
+    }
+};
+
+const maybeHidePairHoverOverlay = () => {
+    if (hoveredPairIndex !== null) {
+        return;
+    }
+    setHighlightedPairIndex(null);
+    renderPairHoverDetails(null);
+};
+
+const handleRevealChartHover = (event, activeElements, chart) => {
+    const pairIndex = getHoveredPairIndex(chart, event, activeElements);
+    hoveredPairIndex = pairIndex;
+
+    if (pairIndex !== null) {
+        setHighlightedPairIndex(pairIndex);
+        renderPairHoverDetails(pairIndex);
+        positionPairHoverOverlay(event);
+    } else {
+        maybeHidePairHoverOverlay();
+    }
+};
+
+const getHoveredPairIndex = (chart, event, activeElements) => {
+    if (!chart || !chart.scales || !chart.scales.x || !event) {
+        return null;
+    }
+
+    const xScale = chart.scales.x;
+    const area = chart.chartArea;
+    const x = event.x;
+    const y = event.y;
+
+    if (typeof x !== 'number' || typeof y !== 'number' || !area) {
+        return null;
+    }
+
+    const withinX = x >= (area.left - 8) && x <= (area.right + 8);
+    const labelBandTop = area.bottom - 14;
+    const labelBandBottom = Math.max(labelBandTop + 30, xScale.bottom + 28);
+    const withinXAxisLabelBand = y >= labelBandTop && y <= labelBandBottom;
+
+    if (!withinX || !withinXAxisLabelBand) {
+        return null;
+    }
+
+    const scaleValue = xScale.getValueForPixel(x);
+    let index = -1;
+    if (typeof scaleValue === 'number') {
+        index = Math.round(scaleValue);
+    } else {
+        index = (chart.data.labels || []).indexOf(scaleValue);
+    }
+
+    if (index < 0 || index >= revealPairLabels.length) {
+        return null;
+    }
+    return index;
 };
 
 const renderRevealLevelsChart = (mode) => {
-    const resolvedMode = mode === 'box' && boxWhiskerSupported ? 'box' : 'minmax';
-    currentRevealMode = resolvedMode;
-
     if (revealLevelsChart) {
         revealLevelsChart.destroy();
         revealLevelsChart = null;
     }
 
-    if (resolvedMode === 'box') {
+    if (!boxWhiskerSupported) {
         if (revealTitleElement) {
-            revealTitleElement.textContent = 'Reveal Level by Pair (Box-Whisker)';
+            revealTitleElement.textContent = 'Reveal Level by Pair (Box-Whisker Unavailable)';
         }
-
-        const revealDistribution = graphData.reveal_distribution || [];
-        const boxDatasets = revealDistribution.map((series, index) => {
-            const color = colorPalette[index % colorPalette.length];
-            return {
-                label: series.label,
-                data: (series.raw_values || []).map((values) => {
-                    const safeValues = values.length ? values : [0];
-                    return safeValues.map(toCompactRevealScale);
-                }),
-                backgroundColor: color + '2b',
-                borderColor: color,
-                borderWidth: 1.2,
-                categoryPercentage: 0.68,
-                barPercentage: 0.72,
-                medianColor: '#111827',
-                whiskerColor: '#111827',
-                lowerBackgroundColor: color + '33',
-                outlierColor: '#1f2937',
-                itemBackgroundColor: color,
-                itemBorderColor: color,
-                itemRadius: 2,
-                outlierRadius: 2
-            };
-        });
-
-        revealLevelsChart = new Chart(document.getElementById('revealLevelsChart'), {
-            type: 'boxplot',
-            data: {
-                labels: revealPairLabels,
-                datasets: boxDatasets
-            },
-            options: {
-                ...commonPluginOptions,
-                responsive: true,
-                plugins: {
-                    ...commonPluginOptions.plugins,
-                    legend: {
-                        display: true,
-                        position: 'top',
-                        labels: {
-                            usePointStyle: true,
-                            boxWidth: 12,
-                            padding: 14
-                        }
-                    },
-                    tooltip: {
-                        callbacks: {
-                            label: function(context) {
-                                const revealSeries = revealDistribution[context.datasetIndex] || null;
-                                const statList = revealSeries ? (revealSeries.stats || []) : [];
-                                const stat = statList[context.dataIndex] || null;
-                                if (!stat) {
-                                    return context.dataset.label;
-                                }
-                                return `min ${stat.min}, q1 ${stat.q1}, median ${stat.median}, q3 ${stat.q3}, max ${stat.max}, avg ${stat.avg}, n=${stat.count}`;
-                            }
-                        }
-                    }
-                },
-                scales: {
-                    x: {
-                        grid: {
-                            color: '#f0f0f0'
-                        }
-                    },
-                    y: {
-                        min: 0,
-                        max: 1,
-                        ticks: {
-                            stepSize: 0.25,
-                            callback: function(value) {
-                                return fromCompactRevealScale(value);
-                            }
-                        },
-                        title: { display: true, text: 'Reveal Level (0-2)' },
-                        grid: {
-                            color: '#e6e6e6'
-                        }
-                    }
-                }
-            }
-        });
-    } else {
-        if (revealTitleElement) {
-            revealTitleElement.textContent = 'Reveal Level by Pair (Min-Max + Avg)';
-        }
-
-        const minPointDatasets = [{
-            type: 'line',
-            label: 'Min',
-            statType: 'min',
-            data: revealPairStats.map((point) => Number(point.min || 0)),
-            borderColor: colorPalette[0],
-            backgroundColor: colorPalette[0],
-            showLine: false,
-            pointRadius: 5,
-            pointHoverRadius: 6,
-            pointStyle: 'circle'
-        }];
-
-        const avgPointDatasets = [{
-            type: 'line',
-            label: 'Average',
-            statType: 'avg',
-            data: revealPairStats.map((point) => Number(point.avg || 0)),
-            borderColor: colorPalette[1],
-            backgroundColor: colorPalette[1],
-            showLine: false,
-            pointRadius: 5,
-            pointHoverRadius: 6,
-            pointStyle: 'circle'
-        }];
-
-        const maxPointDatasets = [{
-            type: 'line',
-            label: 'Max',
-            statType: 'max',
-            data: revealPairStats.map((point) => Number(point.max || 0)),
-            borderColor: colorPalette[2],
-            backgroundColor: colorPalette[2],
-            showLine: false,
-            pointRadius: 5,
-            pointHoverRadius: 6,
-            pointStyle: 'circle'
-        }];
-
-        revealLevelsChart = new Chart(document.getElementById('revealLevelsChart'), {
-            type: 'line',
-            data: {
-                labels: revealPairLabels,
-                datasets: [...maxPointDatasets, ...minPointDatasets, ...avgPointDatasets]
-            },
-            options: {
-                ...commonPluginOptions,
-                responsive: true,
-                plugins: {
-                    ...commonPluginOptions.plugins,
-                    legend: {
-                        display: true,
-                        position: 'top'
-                    },
-                    tooltip: {
-                        callbacks: {
-                            label: function(context) {
-                                const stat = revealPairStats[context.dataIndex] || null;
-                                if (!stat) {
-                                    return context.dataset.label;
-                                }
-
-                                const statType = context.dataset.statType || 'range';
-                                if (statType === 'min') {
-                                    return `min: ${stat.min}`;
-                                }
-                                if (statType === 'avg') {
-                                    return `avg: ${stat.avg}`;
-                                }
-                                if (statType === 'max') {
-                                    return `max: ${stat.max}`;
-                                }
-                                return `min ${stat.min}, avg ${stat.avg}, max ${stat.max}, n=${stat.count}`;
-                            }
-                        }
-                    }
-                },
-                scales: {
-                    y: {
-                        min: 0,
-                        max: 2,
-                        ticks: { stepSize: 0.5 },
-                        title: { display: true, text: 'Reveal Level (0-2)' }
-                    }
-                }
-            }
-        });
+        return;
     }
 
-    updateRevealToggleButton(resolvedMode);
+    if (revealTitleElement) {
+        revealTitleElement.textContent = 'Reveal Level by Pair (Box-Whisker)';
+    }
+
+    const revealDistribution = graphData.reveal_distribution || [];
+    const boxDatasets = revealDistribution.map((series, index) => {
+        const color = colorPalette[index % colorPalette.length];
+        return {
+            label: series.label,
+            data: (series.raw_values || []).map((values) => {
+                const safeValues = values.length ? values : [0];
+                return safeValues.map(toCompactRevealScale);
+            }),
+            backgroundColor: color + '2b',
+            borderColor: color,
+            borderWidth: 1.2,
+            categoryPercentage: 0.68,
+            barPercentage: 0.72,
+            medianColor: '#111827',
+            whiskerColor: '#111827',
+            lowerBackgroundColor: color + '33',
+            outlierColor: '#1f2937',
+            itemBackgroundColor: color,
+            itemBorderColor: color,
+            itemRadius: 2,
+            outlierRadius: 2
+        };
+    });
+
+    revealLevelsChart = new Chart(document.getElementById('revealLevelsChart'), {
+        type: 'boxplot',
+        data: {
+            labels: revealPairLabels,
+            datasets: boxDatasets
+        },
+        options: {
+            ...commonPluginOptions,
+            responsive: true,
+            interaction: {
+                mode: 'index',
+                intersect: false
+            },
+            onHover: handleRevealChartHover,
+            plugins: {
+                ...commonPluginOptions.plugins,
+                legend: {
+                    display: true,
+                    position: 'top',
+                    labels: {
+                        usePointStyle: true,
+                        boxWidth: 12,
+                        padding: 14
+                    }
+                },
+                tooltip: {
+                    callbacks: {
+                        label: function(context) {
+                            const revealSeries = revealDistribution[context.datasetIndex] || null;
+                            const statList = revealSeries ? (revealSeries.stats || []) : [];
+                            const stat = statList[context.dataIndex] || null;
+                            if (!stat) {
+                                return context.dataset.label;
+                            }
+                            return `min ${stat.min}, q1 ${stat.q1}, median ${stat.median}, q3 ${stat.q3}, max ${stat.max}, avg ${stat.avg}, n=${stat.count}`;
+                        }
+                    }
+                }
+            },
+            scales: {
+                x: {
+                    ticks: {
+                        color: (ctx) => (ctx.index === highlightedPairIndex ? '#1d4ed8' : '#6b7280'),
+                        font: (ctx) => ({
+                            weight: ctx.index === highlightedPairIndex ? '700' : '400'
+                        })
+                    },
+                    grid: {
+                        color: (ctx) => (ctx.index === highlightedPairIndex ? 'rgba(29, 78, 216, 0.35)' : '#f0f0f0'),
+                        lineWidth: (ctx) => (ctx.index === highlightedPairIndex ? 2 : 1)
+                    }
+                },
+                y: {
+                    min: 0,
+                    max: 1,
+                    ticks: {
+                        stepSize: 0.25,
+                        callback: function(value) {
+                            return fromCompactRevealScale(value);
+                        }
+                    },
+                    title: { display: true, text: 'Reveal Level (0-2)' },
+                    grid: {
+                        color: '#e6e6e6'
+                    }
+                }
+            }
+        }
+    });
 };
 
-if (revealChartToggle) {
-    revealChartToggle.addEventListener('click', function() {
-        const targetMode = currentRevealMode === 'box' ? 'minmax' : 'box';
-        renderRevealLevelsChart(targetMode);
+renderRevealLevelsChart();
+renderPairHoverDetails(null);
+
+const responsePairOrder = getSortedIndicesByWeightedResponse(
+    graphData.pair_labels,
+    graphData.pair_response_datasets
+);
+
+const orderedPairLabels = (responsePairOrder.length ? responsePairOrder : (graphData.pair_labels || []).map((_, idx) => idx))
+    .map((index) => (graphData.pair_labels || [])[index]);
+
+const orderedPairResponseDatasets = (graphData.pair_response_datasets || []).map((dataset, index) => ({
+    label: (responseLabelsByCode[String(dataset.label)] || String(dataset.label)),
+    data: (responsePairOrder.length ? responsePairOrder : (dataset.data || []).map((_, idx) => idx))
+        .map((pairIndex) => (dataset.data || [])[pairIndex] || 0),
+    backgroundColor: (responseColorsByCode[String(dataset.label)] || colorPalette[index % colorPalette.length])
+}));
+
+new Chart(document.getElementById('responseChart'), {
+    type: 'bar',
+    data: {
+        labels: orderedPairLabels,
+        datasets: orderedPairResponseDatasets
+    },
+    options: {
+        ...commonPluginOptions,
+        responsive: true,
+        plugins: {
+            ...commonPluginOptions.plugins,
+            legend: {
+                position: 'bottom',
+                align: 'start',
+                labels: {
+                    usePointStyle: true,
+                    pointStyle: 'rectRounded',
+                    boxWidth: 10,
+                    padding: 12,
+                    font: {
+                        size: 11
+                    },
+                    generateLabels: (chart) => {
+                        const labels = Chart.defaults.plugins.legend.labels.generateLabels(chart);
+                        labels.forEach((item) => {
+                            const rawCode = String(chart.data.datasets[item.datasetIndex]?.label || '');
+                            const code = Object.keys(responseLabelsByCode).find((key) => responseLabelsByCode[key] === rawCode);
+                            if (code) {
+                                item.text = `${code} - ${responseLabelsByCode[code]}`;
+                            }
+                        });
+                        return labels;
+                    }
+                }
+            }
+        },
+        scales: {
+            x: { stacked: true },
+            y: {
+                beginAtZero: true,
+                stacked: true,
+                ticks: { precision: 0 },
+                title: {
+                    display: true,
+                    text: 'Response Count'
+                }
+            }
+        }
+    }
+});
+
+const respondentToggleDisclosed = document.getElementById('respondentToggleDisclosed');
+const respondentToggleRisk = document.getElementById('respondentToggleRisk');
+const respondentRows = (graphData.student_labels || []).map((label, index) => ({
+    label,
+    characterDisclosed: Number((graphData.student_character_disclosed || [])[index] || 0),
+    privacyRisk: Number((graphData.student_privacy_risk || [])[index] || 0)
+}));
+
+let respondentMetric = 'characterDisclosed';
+
+const respondentChart = new Chart(document.getElementById('studentScoreChart'), {
+    type: 'scatter',
+    data: {
+        datasets: []
+    },
+    options: {
+        ...commonPluginOptions,
+        responsive: true,
+        plugins: {
+            ...commonPluginOptions.plugins,
+            legend: {
+                display: false
+            },
+            tooltip: {
+                callbacks: {
+                    title: function(context) {
+                        const item = context && context[0];
+                        const labelIndex = item ? item.raw.x : 0;
+                        return respondentChart.data.labels[labelIndex] || '';
+                    },
+                    label: function(context) {
+                        const metricLabel = respondentMetric === 'characterDisclosed' ? 'Disclosure Budget Use (%)' : 'KAPR Risk (%)';
+                        return `${metricLabel}: ${context.raw.y.toFixed(2)}%`;
+                    }
+                }
+            }
+        },
+        scales: {
+            x: {
+                type: 'linear',
+                min: -0.5,
+                ticks: {
+                    stepSize: 1,
+                    callback: function(value) {
+                        const idx = Number(value);
+                        if (!Number.isInteger(idx)) {
+                            return '';
+                        }
+                        return respondentChart.data.labels[idx] || '';
+                    }
+                },
+                title: {
+                    display: true,
+                    text: 'Reviewers (original order)'
+                }
+            },
+            y: {
+                beginAtZero: true,
+                max: 100,
+                title: {
+                    display: true,
+                    text: 'Disclosure Budget Use (%)'
+                }
+            }
+        }
+    }
+});
+
+const renderRespondentMetric = (metricKey) => {
+    respondentMetric = metricKey;
+    const orderedRows = respondentRows.slice();
+    const labels = orderedRows.map((row) => row.label);
+    const color = metricKey === 'characterDisclosed' ? '#16a34a' : '#dc2626';
+    const metricLabel = metricKey === 'characterDisclosed' ? 'Disclosure Budget Use (%)' : 'KAPR Risk (%)';
+
+    respondentChart.data.labels = labels;
+    respondentChart.data.datasets = [{
+        label: metricLabel,
+        data: orderedRows.map((row, index) => ({ x: index, y: row[metricKey] || 0 })),
+        pointRadius: 4,
+        pointHoverRadius: 6,
+        pointBackgroundColor: color,
+        pointBorderColor: '#ffffff',
+        pointBorderWidth: 1.2,
+        showLine: false
+    }];
+
+    if (respondentToggleDisclosed && respondentToggleRisk) {
+        respondentToggleDisclosed.classList.toggle('active', metricKey === 'characterDisclosed');
+        respondentToggleRisk.classList.toggle('active', metricKey === 'privacyRisk');
+    }
+
+    if (respondentChart.options && respondentChart.options.scales && respondentChart.options.scales.y && respondentChart.options.scales.y.title) {
+        respondentChart.options.scales.y.title.text = metricLabel;
+    }
+
+    respondentChart.update();
+};
+
+if (respondentToggleDisclosed) {
+    respondentToggleDisclosed.addEventListener('click', function() {
+        renderRespondentMetric('characterDisclosed');
     });
 }
 
-renderRevealLevelsChart(canUseAdaptiveBoxWhisker ? 'box' : 'minmax');
+if (respondentToggleRisk) {
+    respondentToggleRisk.addEventListener('click', function() {
+        renderRespondentMetric('privacyRisk');
+    });
+}
 
-new Chart(document.getElementById('conclusionChart'), {
-    type: 'bar',
-    data: {
-        labels: graphData.pair_labels,
-        datasets: graphData.pair_conclusion_datasets.map((dataset, index) => ({
-            label: dataset.label,
-            data: dataset.data,
-            backgroundColor: colorPalette[index % colorPalette.length]
-        }))
-    },
-    options: {
-        ...commonPluginOptions,
-        responsive: true,
-        scales: {
-            x: { stacked: true },
-            y: {
-                beginAtZero: true,
-                stacked: true,
-                ticks: { precision: 0 }
-            }
-        }
-    }
-});
+renderRespondentMetric('characterDisclosed');
 
-new Chart(document.getElementById('fieldRevealDistributionChart'), {
-    type: 'bar',
-    data: {
-        labels: graphData.field_level_labels,
-        datasets: [
-            { label: 'Level 0', data: graphData.field_level_zero, backgroundColor: '#9ca3af' },
-            { label: 'Level 1', data: graphData.field_level_one, backgroundColor: '#2563eb' },
-            { label: 'Level 2', data: graphData.field_level_two, backgroundColor: '#16a34a' }
-        ]
-    },
-    options: {
-        ...commonPluginOptions,
-        responsive: true,
-        scales: {
-            x: { stacked: true },
-            y: {
-                beginAtZero: true,
-                stacked: true,
-                ticks: { precision: 0 }
-            }
-        }
-    }
-});
+const frontierPoints = (graphData.privacy_utility_frontier_points || []).map((point) => ({
+    x: Number(point.disclosure_percent || 0),
+    y: Number(point.consensus_percent || 0),
+    pairLabel: point.pair_label || '',
+    responseCount: Number(point.response_count || 0)
+}));
 
-new Chart(document.getElementById('scoreChart'), {
-    type: 'bar',
+const privacyUtilityFrontierChart = new Chart(document.getElementById('privacyUtilityFrontierChart'), {
+    type: 'scatter',
     data: {
-        labels: ['Character Disclosed %', 'Privacy Risk %'],
         datasets: [{
-            label: 'Average',
-            data: [graphData.avg_character_disclosed, graphData.avg_privacy_risk],
-            backgroundColor: ['#16a34a', '#dc2626']
+            label: 'Pairs',
+            data: frontierPoints,
+            pointRadius: 5,
+            pointHoverRadius: 7,
+            pointBackgroundColor: '#2563eb',
+            pointBorderColor: '#ffffff',
+            pointBorderWidth: 1.2
         }]
     },
     options: {
         ...commonPluginOptions,
         responsive: true,
+        plugins: {
+            ...commonPluginOptions.plugins,
+            legend: { display: false },
+            tooltip: {
+                callbacks: {
+                    title: function(context) {
+                        const item = context && context[0];
+                        return item && item.raw ? item.raw.pairLabel : '';
+                    },
+                    label: function(context) {
+                        const item = context.raw || {};
+                        return `Disclosure ${item.x.toFixed(2)}%, Consensus ${item.y.toFixed(2)}%, n=${item.responseCount}`;
+                    }
+                }
+            }
+        },
         scales: {
+            x: {
+                beginAtZero: true,
+                max: 100,
+                title: { display: true, text: 'Character Disclosure (%)' }
+            },
             y: {
                 beginAtZero: true,
-                max: 100
+                max: 100,
+                title: { display: true, text: 'Consensus Rate (%)' }
             }
         }
     }
 });
 
-new Chart(document.getElementById('studentScoreChart'), {
-    type: 'line',
+const fieldContributionRows = (graphData.field_contribution_labels || []).map((label, index) => ({
+    label,
+    disclosurePressure: Number((graphData.field_disclosure_pressure || [])[index] || 0),
+    exposureRate: Number((graphData.field_partial_or_full_exposure || [])[index] || 0)
+})).sort((a, b) => b.disclosurePressure - a.disclosurePressure);
+
+new Chart(document.getElementById('fieldContributionChart'), {
+    type: 'bar',
     data: {
-        labels: graphData.student_labels,
+        labels: fieldContributionRows.map((row) => row.label),
         datasets: [
             {
-                label: 'Character Disclosed %',
-                data: graphData.student_character_disclosed,
-                borderColor: '#16a34a',
-                backgroundColor: '#16a34a',
-                tension: 0.2
+                label: 'Disclosure Pressure %',
+                data: fieldContributionRows.map((row) => row.disclosurePressure),
+                backgroundColor: '#2563eb'
             },
             {
-                label: 'Privacy Risk %',
-                data: graphData.student_privacy_risk,
-                borderColor: '#dc2626',
-                backgroundColor: '#dc2626',
-                tension: 0.2
+                label: 'Partial/Full Exposure %',
+                data: fieldContributionRows.map((row) => row.exposureRate),
+                backgroundColor: '#93c5fd'
             }
         ]
     },
     options: {
         ...commonPluginOptions,
         responsive: true,
+        plugins: {
+            ...commonPluginOptions.plugins,
+            legend: {
+                position: 'bottom',
+                labels: {
+                    usePointStyle: true,
+                    pointStyle: 'rectRounded',
+                    boxWidth: 10,
+                    padding: 12
+                }
+            }
+        },
         scales: {
             y: {
                 beginAtZero: true,
-                max: 100
+                max: 100,
+                title: {
+                    display: true,
+                    text: 'Percent (%)'
+                }
+            }
+        }
+    }
+});
+
+const difficultyResponseDatasets = (graphData.difficulty_response_datasets || []).map((dataset, index) => ({
+    label: (responseLabelsByCode[String(dataset.label)] || String(dataset.label)),
+    data: dataset.data || [],
+    backgroundColor: (responseColorsByCode[String(dataset.label)] || colorPalette[index % colorPalette.length])
+}));
+
+new Chart(document.getElementById('difficultyResponseChart'), {
+    type: 'bar',
+    data: {
+        labels: graphData.difficulty_labels || ['Hard', 'Medium', 'Easy'],
+        datasets: difficultyResponseDatasets
+    },
+    options: {
+        ...commonPluginOptions,
+        responsive: true,
+        plugins: {
+            ...commonPluginOptions.plugins,
+            legend: {
+                position: 'bottom',
+                labels: {
+                    usePointStyle: true,
+                    pointStyle: 'rectRounded',
+                    boxWidth: 10,
+                    padding: 10,
+                    font: { size: 11 }
+                }
+            }
+        },
+        scales: {
+            x: {
+                stacked: true,
+                title: {
+                    display: true,
+                    text: 'Pair Difficulty (based on pair-level consensus)'
+                }
+            },
+            y: {
+                beginAtZero: true,
+                stacked: true,
+                ticks: { precision: 0 },
+                title: {
+                    display: true,
+                    text: 'Response Count'
+                }
+            }
+        }
+    }
+});
+
+new Chart(document.getElementById('budgetEfficiencyChart'), {
+    type: 'bar',
+    data: {
+        labels: graphData.budget_efficiency_labels || [],
+        datasets: [{
+            label: 'Percent',
+            data: graphData.budget_efficiency_values || [],
+            backgroundColor: ['#16a34a', '#2563eb', '#7c3aed']
+        }]
+    },
+    options: {
+        ...commonPluginOptions,
+        responsive: true,
+        plugins: {
+            ...commonPluginOptions.plugins,
+            legend: {
+                display: false
+            },
+            tooltip: {
+                callbacks: {
+                    title: function(context) {
+                        const item = context && context[0];
+                        return item ? item.label : '';
+                    },
+                    label: function(context) {
+                        return `Value: ${Number(context.raw || 0).toFixed(2)}%`;
+                    },
+                    afterLabel: function(context) {
+                        const label = String(context.label || '');
+                        if (label === 'Avg Character Disclosure %') {
+                            return 'Formula: sum(character_disclosed_percent_value) / #respondents';
+                        }
+                        if (label === 'High-Consensus Pair Rate %') {
+                            return 'Formula: 100 * (#pairs with max response share >= 75%) / (#reviewed pairs)';
+                        }
+                        if (label === 'Pairs Reviewed %') {
+                            return 'Formula: 100 * (#pairs with >= 1 response) / (total #pairs)';
+                        }
+                        return '';
+                    }
+                }
+            }
+        },
+        scales: {
+            y: {
+                beginAtZero: true,
+                max: 100,
+                title: {
+                    display: true,
+                    text: 'Percent (%)'
+                }
             }
         }
     }

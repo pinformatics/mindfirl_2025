@@ -110,8 +110,8 @@ def status_to_level(status, has_partial_level):
     return 0
 
 
-def selection_to_conclusion_label(selection):
-    """Normalize response selection labels to valid conclusion codes."""
+def selection_to_response_label(selection):
+    """Normalize response selection labels to valid response codes."""
     if not selection:
         return ""
 

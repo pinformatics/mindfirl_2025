@@ -11,7 +11,7 @@ from user_state import (
     get_response_keys_for_filename,
     get_snapshot_key_for_response_key,
     safe_parse_json,
-    selection_to_conclusion_label,
+    selection_to_response_label,
     status_to_level,
 )
 
@@ -66,7 +66,7 @@ def build_redis_csv_rows(redis_client, filename):
         for pair_index, pair_number in enumerate(pair_numbers):
             pair_num = pair_index + 1
             selection = selections[pair_index].strip() if pair_index < len(selections) else ""
-            row[f"pair_{pair_num}_conclusion"] = selection_to_conclusion_label(selection)
+            row[f"pair_{pair_num}_response"] = selection_to_response_label(selection)
 
             snapshot_pair_levels = snapshot_reveal_levels.get(str(pair_num), [])
 
@@ -103,7 +103,7 @@ def build_redis_csv_fieldnames(pair_numbers):
 
     for pair_index, _ in enumerate(pair_numbers):
         pair_num = pair_index + 1
-        fieldnames.append(f"pair_{pair_num}_conclusion")
+        fieldnames.append(f"pair_{pair_num}_response")
 
     fieldnames.extend(["character_disclosed_percent_value", "privacy_risk_percent_value"])
     return fieldnames
@@ -281,18 +281,18 @@ def build_graph_payload(rows, pair_numbers):
             }
         )
 
-    conclusion_labels = ["1", "2", "3", "4", "5", "6"]
-    conclusion_counts = {label: 0 for label in conclusion_labels}
-    pair_conclusion_counts = {label: [0 for _ in pair_numbers] for label in conclusion_labels}
+    response_labels = ["1", "2", "3", "4", "5", "6"]
+    response_counts = {label: 0 for label in response_labels}
+    pair_response_counts = {label: [0 for _ in pair_numbers] for label in response_labels}
 
     for row in rows:
         for pair_index, _ in enumerate(pair_numbers):
             pair_num = pair_index + 1
-            conclusion_key = f"pair_{pair_num}_conclusion"
-            conclusion_value = str(row.get(conclusion_key, "")).strip()
-            if conclusion_value in conclusion_counts:
-                conclusion_counts[conclusion_value] += 1
-                pair_conclusion_counts[conclusion_value][pair_index] += 1
+            response_key = f"pair_{pair_num}_response"
+            response_value = str(row.get(response_key, "")).strip()
+            if response_value in response_counts:
+                response_counts[response_value] += 1
+                pair_response_counts[response_value][pair_index] += 1
 
     field_level_counts = {
         column_name: {"0": 0, "1": 0, "2": 0}
@@ -333,6 +333,102 @@ def build_graph_payload(rows, pair_numbers):
         avg_character_disclosed = 0
         avg_privacy_risk = 0
 
+    # Paper-aligned metrics:
+    # 1) Privacy-utility frontier: pair-level disclosure vs consensus rate
+    # 2) Field disclosure contribution: per-field disclosure pressure
+    # 3) Response distribution by pair difficulty (hard/medium/easy)
+    # 4) Budget efficiency summary
+    privacy_utility_frontier_points = []
+    difficulty_buckets = {
+        "Hard": {label: 0 for label in response_labels},
+        "Medium": {label: 0 for label in response_labels},
+        "Easy": {label: 0 for label in response_labels},
+    }
+    reviewed_pair_count = 0
+    high_consensus_pair_count = 0
+
+    for pair_index, _ in enumerate(pair_numbers):
+        pair_label = pair_labels[pair_index]
+        response_vector = [pair_response_counts[label][pair_index] for label in response_labels]
+        response_total = sum(response_vector)
+
+        if response_total > 0:
+            reviewed_pair_count += 1
+
+        max_votes = max(response_vector) if response_vector else 0
+        consensus_rate = round((100.0 * max_votes / response_total), 2) if response_total > 0 else 0.0
+        if consensus_rate >= 75.0 and response_total > 0:
+            high_consensus_pair_count += 1
+
+        pair_avg_reveal_level = 0.0
+        if pair_index < len(reveal_pair_stats):
+            pair_avg_reveal_level = float(reveal_pair_stats[pair_index].get("avg", 0.0) or 0.0)
+        disclosure_percent = round((pair_avg_reveal_level / 2.0) * 100.0, 2)
+
+        privacy_utility_frontier_points.append(
+            {
+                "pair_label": pair_label,
+                "disclosure_percent": disclosure_percent,
+                "consensus_percent": consensus_rate,
+                "response_count": response_total,
+            }
+        )
+
+        if consensus_rate < 50.0:
+            bucket = "Hard"
+        elif consensus_rate < 75.0:
+            bucket = "Medium"
+        else:
+            bucket = "Easy"
+
+        for label, count in zip(response_labels, response_vector):
+            difficulty_buckets[bucket][label] += count
+
+    field_contribution_labels = []
+    field_disclosure_pressure = []
+    field_partial_or_full_exposure = []
+    column_display_names = {column_name: label for label, column_name in ATTRIBUTE_COLUMNS}
+
+    for _, column_name in ATTRIBUTE_COLUMNS:
+        level_zero = field_level_counts[column_name]["0"]
+        level_one = field_level_counts[column_name]["1"]
+        level_two = field_level_counts[column_name]["2"]
+        total = level_zero + level_one + level_two
+
+        if total > 0:
+            avg_level = (level_one + 2 * level_two) / float(total)
+            disclosure_pressure = round((avg_level / 2.0) * 100.0, 2)
+            partial_or_full = round((100.0 * (level_one + level_two) / float(total)), 2)
+        else:
+            disclosure_pressure = 0.0
+            partial_or_full = 0.0
+
+        field_contribution_labels.append(column_display_names.get(column_name, column_name))
+        field_disclosure_pressure.append(disclosure_pressure)
+        field_partial_or_full_exposure.append(partial_or_full)
+
+    pair_total_count = len(pair_numbers)
+    reviewed_pair_rate = round((100.0 * reviewed_pair_count / pair_total_count), 2) if pair_total_count > 0 else 0.0
+    high_consensus_pair_rate = (
+        round((100.0 * high_consensus_pair_count / reviewed_pair_count), 2)
+        if reviewed_pair_count > 0
+        else 0.0
+    )
+
+    preferred_difficulty_order = ["Hard", "Medium", "Easy"]
+    difficulty_labels = [
+        level
+        for level in preferred_difficulty_order
+        if sum(difficulty_buckets[level].values()) > 0
+    ]
+    if not difficulty_labels:
+        difficulty_labels = preferred_difficulty_order
+
+    difficulty_response_datasets = [
+        {"label": label, "data": [difficulty_buckets[level][label] for level in difficulty_labels]}
+        for label in response_labels
+    ]
+
     return {
         "pair_labels": pair_labels,
         "reveal_datasets": reveal_datasets,
@@ -345,11 +441,11 @@ def build_graph_payload(rows, pair_numbers):
         "reveal_pair_raw_values": reveal_pair_raw_values,
         "reveal_pair_stats": reveal_pair_stats,
         "student_count": len(rows),
-        "conclusion_labels": conclusion_labels,
-        "conclusion_counts": [conclusion_counts[label] for label in conclusion_labels],
-        "pair_conclusion_datasets": [
-            {"label": label, "data": pair_conclusion_counts[label]}
-            for label in conclusion_labels
+        "response_labels": response_labels,
+        "response_counts": [response_counts[label] for label in response_labels],
+        "pair_response_datasets": [
+            {"label": label, "data": pair_response_counts[label]}
+            for label in response_labels
         ],
         "field_level_labels": [column_name for _, column_name in ATTRIBUTE_COLUMNS],
         "field_level_zero": [field_level_counts[column_name]["0"] for _, column_name in ATTRIBUTE_COLUMNS],
@@ -360,7 +456,62 @@ def build_graph_payload(rows, pair_numbers):
         "student_privacy_risk": student_privacy_risk,
         "avg_character_disclosed": avg_character_disclosed,
         "avg_privacy_risk": avg_privacy_risk,
+        "privacy_utility_frontier_points": privacy_utility_frontier_points,
+        "field_contribution_labels": field_contribution_labels,
+        "field_disclosure_pressure": field_disclosure_pressure,
+        "field_partial_or_full_exposure": field_partial_or_full_exposure,
+        "difficulty_labels": difficulty_labels,
+        "difficulty_response_datasets": difficulty_response_datasets,
+        "budget_efficiency_labels": [
+            "Avg Character Disclosure %",
+            "High-Consensus Pair Rate %",
+            "Pairs Reviewed %",
+        ],
+        "budget_efficiency_values": [
+            avg_character_disclosed,
+            high_consensus_pair_rate,
+            reviewed_pair_rate,
+        ],
     }
+
+
+def build_pair_record_details(filename):
+    """Return row-level pair details to support hover drill-down on graph page."""
+    data_pairs = dl.load_data_from_csv(filename)
+    pair_details = []
+
+    for index in range(0, len(data_pairs), 2):
+        row_a = data_pairs[index]
+        row_b = data_pairs[index + 1] if index + 1 < len(data_pairs) else ["" for _ in row_a]
+
+        pair_details.append(
+            {
+                "pair_label": "Pair {}".format((index // 2) + 1),
+                "pair_number": row_a[0] if row_a else "",
+                "record_a": {
+                    "id": row_a[1] if len(row_a) > 1 else "",
+                    "ffreq": row_a[2] if len(row_a) > 2 else "",
+                    "first_name": row_a[3] if len(row_a) > 3 else "",
+                    "last_name": row_a[4] if len(row_a) > 4 else "",
+                    "lfreq": row_a[5] if len(row_a) > 5 else "",
+                    "dob": row_a[6] if len(row_a) > 6 else "",
+                    "sex": row_a[7] if len(row_a) > 7 else "",
+                    "race": row_a[8] if len(row_a) > 8 else "",
+                },
+                "record_b": {
+                    "id": row_b[1] if len(row_b) > 1 else "",
+                    "ffreq": row_b[2] if len(row_b) > 2 else "",
+                    "first_name": row_b[3] if len(row_b) > 3 else "",
+                    "last_name": row_b[4] if len(row_b) > 4 else "",
+                    "lfreq": row_b[5] if len(row_b) > 5 else "",
+                    "dob": row_b[6] if len(row_b) > 6 else "",
+                    "sex": row_b[7] if len(row_b) > 7 else "",
+                    "race": row_b[8] if len(row_b) > 8 else "",
+                },
+            }
+        )
+
+    return pair_details
 
 
 def process_redis_data(redis_client, filename):

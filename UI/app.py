@@ -17,6 +17,7 @@ import data_loader as dl
 import data_model as dm
 from admin_reporting import (
     build_graph_payload,
+    build_pair_record_details,
     build_redis_csv_fieldnames,
     build_redis_csv_rows,
     process_redis_data,
@@ -227,6 +228,7 @@ def export_graph_view():
     """Render admin analytics charts derived from submission data."""
     rows, pair_numbers = build_redis_csv_rows(r, DATA_PATH)
     graph_data = build_graph_payload(rows, pair_numbers)
+    graph_data["pair_record_details"] = build_pair_record_details(DATA_PATH)
     return render_template("admin/graph.html", title="Response Graphs", student_count=len(rows), graph_data=graph_data)
 
 
