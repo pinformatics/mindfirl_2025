@@ -6,6 +6,8 @@
 */
 
 $(document).ready(function(){
+    const csrfToken = window.CSRF_TOKEN || "";
+
     $(document).on("click", "li.input_radio", function(e) {
         e.preventDefault();
         e.stopPropagation();
@@ -27,7 +29,11 @@ $(document).ready(function(){
 
         fetch('/update_selection', {
             method: 'POST',
-            headers: {'Content-Type': 'application/json'},
+            credentials: 'same-origin',
+            headers: {
+                'Content-Type': 'application/json',
+                'X-CSRF-Token': csrfToken
+            },
             body: JSON.stringify({'id': $selected_id})
 
         })
@@ -78,7 +84,10 @@ $(document).ready(function() {
 
         fetch('/submit_selections', {
             method: 'POST',
-            credentials: 'same-origin'
+            credentials: 'same-origin',
+            headers: {
+                'X-CSRF-Token': csrfToken
+            }
         })
         .then(response => {
             if (!response.ok) {

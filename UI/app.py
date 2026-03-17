@@ -11,7 +11,7 @@ from io import StringIO
 from typing import cast
 
 import redis
-from flask import Flask, Response, jsonify, make_response, render_template, request, session
+from flask import Flask, Response, jsonify, make_response, redirect, render_template, request, session, url_for
 
 import data_loader as dl
 import data_model as dm
@@ -39,6 +39,22 @@ from user_state import (
 )
 
 app = Flask(__name__)
+
+
+def _env_flag(name, default=False):
+    """Parse a boolean environment variable with a safe default."""
+    value = os.environ.get(name)
+    if value is None:
+        return default
+    return value.strip().lower() in {"1", "true", "yes", "on"}
+
+
+is_production = os.environ.get("APP_ENV", "").strip().lower() == "production"
+app.config.update(
+    SESSION_COOKIE_HTTPONLY=True,
+    SESSION_COOKIE_SAMESITE=os.environ.get("SESSION_COOKIE_SAMESITE", "Lax"),
+    SESSION_COOKIE_SECURE=_env_flag("SESSION_COOKIE_SECURE", is_production),
+)
 
 FLASK_SECRET_KEY = os.environ.get("FLASK_SECRET_KEY")
 if not FLASK_SECRET_KEY:
@@ -190,7 +206,13 @@ def _display_results_page(filename, template_name, disclosure_setting):
             marker_position=int(settings["privacy_budget"]),
         )
     )
-    response.set_cookie("user_id", user_id)
+    response.set_cookie(
+        "user_id",
+        user_id,
+        secure=app.config["SESSION_COOKIE_SECURE"],
+        httponly=True,
+        samesite=app.config["SESSION_COOKIE_SAMESITE"],
+    )
     return response
 
 
@@ -198,6 +220,9 @@ def _display_results_page(filename, template_name, disclosure_setting):
 @admin_required
 def admin_page():
     """Render admin dashboard."""
+    # Prevent form-resubmission warnings when navigating back from admin subpages.
+    if request.method == "POST":
+        return redirect(url_for("admin_page"))
     return render_template("admin/dashboard.html")
 
 
@@ -260,6 +285,16 @@ def favicon():
     return "", 204
 
 
+@app.route("/healthz", methods=["GET"])
+def healthz():
+    """Return minimal health state for load balancers and uptime checks."""
+    try:
+        r.ping()
+    except redis.ConnectionError as exc:
+        return jsonify(status="degraded", redis="down", detail=str(exc)), 503
+    return jsonify(status="ok", redis="up"), 200
+
+
 @app.route("/")
 def index():
     """Serve the landing page."""
@@ -313,6 +348,9 @@ def results_template():
 @app.route("/update_selection", methods=["POST"])
 def update_selection():
     """Update one temporary selection for the active user."""
+    if not _is_valid_csrf_request():
+        return jsonify(success=False, error="CSRF validation failed."), 403
+
     user_id = request.cookies.get("user_id")
     if not user_id:
         return jsonify(success=False, error="No User ID"), 400
@@ -339,6 +377,9 @@ def update_selection():
 @app.route("/submit_selections", methods=["POST"])
 def submit_selections():
     """Validate and persist final selections for the active user."""
+    if not _is_valid_csrf_request():
+        return jsonify(success=False, error="CSRF validation failed."), 403
+
     user_id = request.cookies.get("user_id")
     if not user_id:
         return jsonify(success=False, error="No User ID"), 400
@@ -389,11 +430,18 @@ def submit_selections():
     return jsonify(success=True)
 
 
-@app.route("/get_cell", methods=["GET", "POST"])
+@app.route("/get_cell", methods=["POST"])
 def open_cell():
     """Reveal the next level for a cell and return updated privacy metrics."""
-    id1 = request.args.get("id1")
-    mode = request.args.get("mode")
+    if not _is_valid_csrf_request():
+        return jsonify(success=False, error="CSRF validation failed."), 403
+
+    payload = request.get_json(silent=True) or {}
+    id1 = payload.get("id1") or request.form.get("id1")
+    mode = payload.get("mode") or request.form.get("mode")
+
+    if not id1 or not mode:
+        return jsonify(success=False, error="Missing request fields"), 400
 
     pair_num = str(id1.split("-")[0])
     attr_num = str(id1.split("-")[2])

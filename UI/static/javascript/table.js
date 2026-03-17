@@ -39,7 +39,16 @@ function get_cell_ajax(current_cell) {
         }
     });
 
-    $.getJSON($SCRIPT_ROOT + '/get_cell', get_response(current_cell), function(data) {
+    $.ajax({
+        url: $SCRIPT_ROOT + '/get_cell',
+        method: 'POST',
+        contentType: 'application/json',
+        dataType: 'json',
+        headers: {
+            'X-CSRF-Token': window.CSRF_TOKEN || ''
+        },
+        data: JSON.stringify(get_response(current_cell)),
+        success: function(data) {
         console.log("foo")
         console.log(data.mode)
         if(data.value1 && data.value2 && data.mode) {
@@ -80,6 +89,7 @@ function get_cell_ajax(current_cell) {
                 $DELTA_CDP[id] = new_delta_cdp_value;
             }
         }
+    }
     });
 }
 

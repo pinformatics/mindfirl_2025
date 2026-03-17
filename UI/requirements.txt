@@ -1,4 +1,4 @@
 Flask==3.1.1
 redis==6.2.0
-gunicorn
-pandas
+gunicorn==25.0.3
+pandas==3.0.0

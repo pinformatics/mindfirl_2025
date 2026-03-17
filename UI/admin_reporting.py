@@ -59,6 +59,7 @@ def build_redis_csv_rows(redis_client, filename):
         row = {
             "student_index": student_index + 1,
             "student_id": user_id,
+            "datetime": snapshot.get("saved_at", ""),
             "character_disclosed_percent_value": character_disclosed_percent_value,
             "privacy_risk_percent_value": privacy_risk_percent_value,
         }
@@ -94,7 +95,7 @@ def build_redis_csv_rows(redis_client, filename):
 
 def build_redis_csv_fieldnames(pair_numbers):
     """Return ordered CSV columns for the admin export."""
-    fieldnames = ["student_index", "student_id"]
+    fieldnames = ["student_index", "student_id", "datetime"]
 
     for pair_index, _ in enumerate(pair_numbers):
         pair_num = pair_index + 1
