@@ -5,9 +5,9 @@
     This file defines the behavior of the choice-panel
 */
 
-$(document).ready(function(){
-    const csrfToken = window.CSRF_TOKEN || "";
+const csrfToken = window.CSRF_TOKEN || "";
 
+$(document).ready(function(){
     $(document).on("click", "li.input_radio", function(e) {
         e.preventDefault();
         e.stopPropagation();
