@@ -4,6 +4,7 @@
 {% set _show_home = header_show_home|default(false) %}
 {% set _title_container_id = header_title_container_id|default('') %}
 {% set _back_url = header_back_url|default('') %}
+{% set _home_url = header_home_url|default(url_for('index')) %}
 
 <nav class="navbar navbar-light bg-white border-bottom">
     <div class="container d-flex flex-nowrap align-items-center justify-content-between py-2">
@@ -22,7 +23,7 @@
             </button>
             {% endif %}
             {% if _show_home %}
-            <button class="btn btn-outline-primary" type="button" onclick="window.location.href='{{ url_for('index') }}'">
+            <button class="btn btn-outline-primary" type="button" onclick="window.location.href='{{ _home_url }}'">
                 Home
             </button>
             {% endif %}

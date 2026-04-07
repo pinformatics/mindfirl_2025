@@ -1,0 +1,51 @@
+{% extends 'admin/base.html' %}
+
+{% block page_title %}Upload Dataset CSV{% endblock %}
+{% block header_title %}Upload Dataset CSV{% endblock %}
+{% block header_back %}{% set header_back_url = url_for('admin_page') %}{% endblock %}
+
+{% block content %}
+<main class="container py-4" style="max-width: 980px;">
+    {% set upload_status = request.args.get('upload_status', '') %}
+    {% set upload_message = request.args.get('upload_message', '') %}
+    <div id="upload-feedback" data-status="{{ upload_status }}" data-message="{{ upload_message }}"></div>
+
+    <div class="card shadow-sm mb-3">
+        <div class="card-body d-flex flex-column flex-md-row justify-content-between align-items-md-center gap-3">
+            <div>
+                <h2 class="h5 mb-1 text-primary">Upload Responses CSV</h2>
+                <p class="mb-0 text-muted">Upload a CSV downloaded from the Export Responses action (same columns/order).</p>
+            </div>
+            <form action="{{ url_for('upload_data_csv') }}" method="post" enctype="multipart/form-data" class="d-flex flex-column flex-sm-row gap-2 mb-0 align-items-stretch align-items-sm-center">
+                <input type="hidden" name="csrf_token" value="{{ csrf_token }}">
+                <input class="form-control" type="file" name="csv_file" accept=".csv,text/csv" required>
+                <button class="btn btn-primary px-4" type="submit">Upload CSV</button>
+            </form>
+        </div>
+    </div>
+
+    <div class="card shadow-sm">
+        <div class="card-body">
+            <h3 class="h6 text-secondary mb-2">Notes</h3>
+            <ul class="mb-0 text-muted">
+                <li>CSV must match the exported report format exactly, including header order.</li>
+                <li>If format is invalid, a popup will show: Not right format.</li>
+                <li>Valid upload is stored for admin reporting workflows.</li>
+            </ul>
+        </div>
+    </div>
+</main>
+<script>
+document.addEventListener('DOMContentLoaded', function () {
+    const feedback = document.getElementById('upload-feedback');
+    const uploadStatus = feedback ? (feedback.dataset.status || '') : '';
+    const uploadMessage = feedback ? (feedback.dataset.message || '') : '';
+    if (uploadStatus === 'error' && uploadMessage) {
+        window.alert(uploadMessage);
+    }
+    if (uploadStatus === 'success' && uploadMessage) {
+        window.alert(uploadMessage);
+    }
+});
+</script>
+{% endblock %}

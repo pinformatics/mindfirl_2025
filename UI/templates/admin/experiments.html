@@ -1,0 +1,298 @@
+{% extends 'admin/base.html' %}
+
+{% block page_title %}Experiments{% endblock %}
+{% block header_title %}Experiments{% endblock %}
+{% block header_back %}{% set header_back_url = url_for('admin_page') %}{% endblock %}
+
+{% block extra_head %}
+<script src="{{ url_for('static', filename='javascript/bootstrap.min.js') }}"></script>
+<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+{% endblock %}
+
+{% block content %}
+<main class="container py-4" style="max-width: 1040px;">
+    {% if status and message %}
+    <div class="alert {% if status == 'success' %}alert-success{% else %}alert-danger{% endif %} py-2" role="alert">
+        {{ message }}
+    </div>
+    {% endif %}
+
+    <div class="modal fade" id="create-experiment-modal" tabindex="-1" aria-hidden="true">
+        <div class="modal-dialog modal-lg modal-dialog-scrollable">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h3 class="modal-title h5 mb-0">Create Experiment</h3>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                </div>
+                <div class="modal-body">
+                    <div>
+                        <h4 class="h6 text-primary mb-2">Create Experiment Label</h4>
+                        <form action="{{ url_for('create_experiment') }}" method="post" class="row g-2 align-items-end">
+                            <input type="hidden" name="csrf_token" value="{{ csrf_token }}">
+                            <div class="col-12 col-md-8">
+                                <label for="create-exp-name" class="form-label mb-1">Experiment Name</label>
+                                <input id="create-exp-name" name="exp_name" type="text" class="form-control" placeholder="e.g., pilot_apr_week1" required>
+                            </div>
+                            <div class="col-12 col-md-4 d-grid">
+                                <button type="submit" class="btn btn-primary">Create Label</button>
+                            </div>
+                            <div class="col-12">
+                                <hr class="my-2">
+                                <p class="text-muted small mb-2">Assign existing data points in this required date range to the new label.</p>
+                            </div>
+                            <div class="col-12 col-md-6">
+                                <label for="create-start" class="form-label mb-1">Start (UTC)</label>
+                                <input id="create-start" name="start" type="datetime-local" class="form-control" required>
+                            </div>
+                            <div class="col-12 col-md-6">
+                                <label for="create-end" class="form-label mb-1">End (UTC)</label>
+                                <input id="create-end" name="end" type="datetime-local" class="form-control" required>
+                            </div>
+                        </form>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="card shadow-sm">
+        <div class="card-body">
+            <h2 class="h5 text-primary mb-3">Experiment Timeline</h2>
+            {% if experiment_range_timeline.has_ranges %}
+            <div class="ratio mb-4" style="--bs-aspect-ratio: 28%;">
+                <canvas id="experimentTimelineRangeChart" class="w-100 h-100"></canvas>
+            </div>
+            {% else %}
+            <p class="text-muted mb-4">No labeled datetime points found yet.</p>
+            {% endif %}
+
+            <div class="d-flex flex-column flex-md-row justify-content-between align-items-md-center gap-2 mb-3">
+                <h2 class="h5 text-primary mb-0">Experiment Summary</h2>
+                <button type="button" class="btn btn-primary btn-sm" data-bs-toggle="modal" data-bs-target="#create-experiment-modal">
+                    Create Experiment
+                </button>
+            </div>
+            {% if experiment_summary %}
+            <div class="table-responsive">
+                <table class="table table-sm table-striped align-middle mb-0">
+                    <thead>
+                        <tr>
+                            <th>#</th>
+                            <th>Experiment</th>
+                            <th>Data Points</th>
+                            <th>Min Datetime (UTC)</th>
+                            <th>Max Datetime (UTC)</th>
+                            <th class="text-end">Actions</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for item in experiment_summary %}
+                        <tr>
+                            <td>{{ loop.index }}</td>
+                            <td>{{ item.exp_name }}</td>
+                            <td>{{ item.count }}</td>
+                            <td>{{ item.min_iso or '-' }}</td>
+                            <td>{{ item.max_iso or '-' }}</td>
+                            <td class="text-end">
+                                <button
+                                    type="button"
+                                    class="btn btn-sm btn-outline-primary"
+                                    data-bs-toggle="modal"
+                                    data-bs-target="#experiment-edit-modal-{{ loop.index }}"
+                                >
+                                    Edit
+                                </button>
+                            </td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+            {% else %}
+            <p class="text-muted mb-0">No experiment labels assigned yet.</p>
+            {% endif %}
+        </div>
+    </div>
+
+    {% for item in experiment_summary %}
+    <div class="modal fade" id="experiment-edit-modal-{{ loop.index }}" tabindex="-1" aria-hidden="true">
+        <div class="modal-dialog modal-lg modal-dialog-scrollable">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h3 class="modal-title h5 mb-0">Edit Experiment: {{ item.exp_name }}</h3>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                </div>
+                <div class="modal-body">
+                    <div class="mb-4">
+                        <h4 class="h6 text-primary mb-2">Edit Experiment Label</h4>
+                        <form
+                            id="assign-range-form-{{ loop.index }}"
+                            action="{{ url_for('assign_experiment_range') }}"
+                            method="post"
+                            class="row g-2"
+                        >
+                            <input type="hidden" name="csrf_token" value="{{ csrf_token }}">
+                            <input type="hidden" name="original_exp_name" value="{{ item.exp_name }}">
+                            <div class="col-12">
+                                <label class="form-label mb-1">Experiment Name</label>
+                                <input name="exp_name" type="text" class="form-control" value="{{ item.exp_name }}" required>
+                            </div>
+                            <div class="col-12">
+                                <label class="form-label mb-1">Start (UTC)</label>
+                                <input name="start" type="datetime-local" class="form-control" value="{{ item.min_local }}" required>
+                            </div>
+                            <div class="col-12">
+                                <label class="form-label mb-1">End (UTC)</label>
+                                <input name="end" type="datetime-local" class="form-control" value="{{ item.max_local }}" required>
+                            </div>
+                        </form>
+                    </div>
+
+                    <div>
+                        <h4 class="h6 text-danger mb-2">Delete Experiment Group Label</h4>
+                        <div class="row g-2">
+                            <div class="col-12 col-md-6 d-grid">
+                                <button
+                                    type="submit"
+                                    form="assign-range-form-{{ loop.index }}"
+                                    class="btn btn-primary"
+                                >
+                                    Save
+                                </button>
+                            </div>
+                            <div class="col-12 col-md-6">
+                                <form action="{{ url_for('clear_experiment_points') }}" method="post" class="d-grid">
+                                    <input type="hidden" name="csrf_token" value="{{ csrf_token }}">
+                                    <input type="hidden" name="exp_name" value="{{ item.exp_name }}">
+                                    <button type="submit" class="btn btn-danger">Delete Label</button>
+                                </form>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+    {% endfor %}
+</main>
+<script id="experiment-timeline-data-json" type="application/json">{{ experiment_range_timeline | tojson }}</script>
+{% endblock %}
+
+{% block scripts %}
+<script>
+document.addEventListener("DOMContentLoaded", function () {
+    var payloadElement = document.getElementById("experiment-timeline-data-json");
+    var canvas = document.getElementById("experimentTimelineRangeChart");
+    if (!payloadElement || !canvas || !window.Chart) {
+        return;
+    }
+
+    var payload = {};
+    try {
+        payload = JSON.parse(payloadElement.textContent || "{}");
+    } catch (err) {
+        return;
+    }
+    if (!payload.has_ranges) {
+        return;
+    }
+
+    var minTs = payload.min_ts;
+    var maxTs = payload.max_ts;
+    if (typeof minTs !== "number" || typeof maxTs !== "number") {
+        return;
+    }
+
+    var formatDateUtc = function (ms) {
+        var d = new Date(ms);
+        var y = d.getUTCFullYear();
+        var m = String(d.getUTCMonth() + 1).padStart(2, "0");
+        var day = String(d.getUTCDate()).padStart(2, "0");
+        return y + "-" + m + "-" + day;
+    };
+
+    var ranges = payload.ranges || [];
+    var datasets = [];
+    for (var i = 0; i < ranges.length; i++) {
+        var rangeItem = ranges[i];
+        datasets.push({
+            label: rangeItem.label || ("Experiment " + (i + 1)),
+            data: [{
+                x: [rangeItem.start_ts, rangeItem.end_ts],
+                y: rangeItem.label,
+                count: rangeItem.count,
+            }],
+            backgroundColor: rangeItem.color || "#1f77b4",
+            borderColor: rangeItem.color || "#1f77b4",
+            borderWidth: 1,
+            barPercentage: 0.7,
+            categoryPercentage: 0.9,
+        });
+    }
+
+    new window.Chart(canvas.getContext("2d"), {
+        type: "bar",
+        data: {
+            datasets: datasets,
+        },
+        options: {
+            indexAxis: "y",
+            responsive: true,
+            maintainAspectRatio: false,
+            animation: false,
+            plugins: {
+                legend: {
+                    position: "top",
+                },
+                tooltip: {
+                    callbacks: {
+                        title: function (items) {
+                            if (!items || !items.length) {
+                                return "";
+                            }
+                            return items[0].parsed.y;
+                        },
+                        label: function (context) {
+                            var raw = context.raw || {};
+                            var startTs = raw.x && raw.x.length ? raw.x[0] : null;
+                            var endTs = raw.x && raw.x.length ? raw.x[1] : null;
+                            var lines = [];
+                            if (typeof startTs === "number" && typeof endTs === "number") {
+                                lines.push("Range: " + formatDateUtc(startTs) + " to " + formatDateUtc(endTs));
+                            }
+                            if (typeof raw.count === "number") {
+                                lines.push("Points: " + raw.count);
+                            }
+                            return lines;
+                        },
+                    },
+                },
+            },
+            scales: {
+                x: {
+                    type: "linear",
+                    min: minTs,
+                    max: maxTs,
+                    ticks: {
+                        callback: function (value) {
+                            return formatDateUtc(value);
+                        },
+                        maxTicksLimit: 8,
+                    },
+                    title: {
+                        display: true,
+                        text: "Date (UTC)",
+                    },
+                },
+                y: {
+                    type: "category",
+                    grid: {
+                        display: false,
+                    },
+                },
+            },
+        },
+    });
+});
+</script>
+{% endblock %}

@@ -102,7 +102,7 @@ h6 {
     padding-left: .75vw;
 }
 
-tr {
+#mobile-table tr {
     height: 110px;
     line-height: 110px;
 }
@@ -450,6 +450,19 @@ table{
     /*table-layout: fixed;*/
     width:1500px;
 }
+
+    #results-range-form {
+        width: 100%;
+    }
+
+    @media (min-width: 992px) {
+        #results-range-form {
+            width: 40% !important;
+            max-width: 40%;
+            flex: 0 0 40%;
+            margin-left: auto;
+        }
+    }
 
 table, th, td {
    /* border: 1px solid black;

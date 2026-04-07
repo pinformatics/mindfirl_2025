@@ -9,6 +9,7 @@
         <link rel="stylesheet" href="{{ url_for('static', filename='css/results.css') }}" type="text/css">
         <link rel="stylesheet" href="{{ url_for('static', filename='css/ionicons.min.css')}}" type="text/css">
         <link rel="stylesheet" href="{{ url_for('static', filename='css/bootstrap.min.css') }}" type="text/css">
+        <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/daterangepicker/daterangepicker.css">
     </head>
 
     <body class="bg-light">
@@ -19,6 +20,21 @@
     </body>   
     <body class="bg-light">
         <!-- <div style="clear:both"></div> -->
+        <div class="container pt-3" style="max-width: 88vw;">
+            <div class="alert alert-info p-3 mb-3" role="alert">
+                <div class="d-flex flex-column flex-lg-row align-items-lg-center gap-5">
+                    <div class="small text-nowrap flex-shrink-0 me-4 me-lg-5">Showing results window: <strong>{{ window_label|default('All Time') }}</strong></div>
+                    <form id="results-range-form" action="{{ url_for('results_template') }}" method="get" class="d-flex flex-nowrap align-items-center justify-content-lg-end gap-2 p-3 bg-white border rounded shadow-sm" style="overflow-x: auto; min-width: 0; width: 100%;">
+                        <input id="results-window" type="hidden" name="window" value="{{ window_key|default('all') }}">
+                        <input id="results-start" type="hidden" name="start" value="{{ custom_start_value|default('') }}">
+                        <input id="results-end" type="hidden" name="end" value="{{ custom_end_value|default('') }}">
+                        <label class="small fw-semibold mb-0 text-nowrap flex-shrink-0" for="results-range-display">Date Range</label>
+                        <input id="results-range-display" type="text" class="form-control form-control-sm fw-semibold" style="min-width: 260px;" readonly>
+                        <button id="results-all-time-btn" type="button" class="btn btn-outline-secondary btn-sm flex-shrink-0">All Time</button>
+                    </form>
+                </div>
+            </div>
+        </div>
         <div id="content" style="display: flex; flex-wrap: wrap; justify-content: center; align-items: flex-start; gap: 20px; padding: 20px; max-width: 88vw; margin: 0 auto;">
             <div style="flex-basis: 55%; min-width: 300px; margin-top: 0.4em; font-size:1.1em">
                 <ul>
@@ -73,5 +89,172 @@
                 <span class="text-muted">Copyright © 2017 • Population Informatics Lab • Texas A&M University</span>
             </div>
         </footer>
+        <script src="https://cdn.jsdelivr.net/npm/jquery@3.7.1/dist/jquery.min.js"></script>
+        <script src="https://cdn.jsdelivr.net/npm/moment@2.30.1/min/moment.min.js"></script>
+        <script src="https://cdn.jsdelivr.net/npm/daterangepicker/daterangepicker.min.js"></script>
+        <script>
+        document.addEventListener('DOMContentLoaded', function () {
+            if (!window.jQuery || !window.moment || !window.jQuery.fn.daterangepicker) {
+                return;
+            }
+
+            const form = document.getElementById('results-range-form');
+            const windowInput = document.getElementById('results-window');
+            const startInput = document.getElementById('results-start');
+            const endInput = document.getElementById('results-end');
+            const displayInput = document.getElementById('results-range-display');
+            if (!form || !windowInput || !startInput || !endInput || !displayInput) {
+                return;
+            }
+
+            const $ = window.jQuery;
+            const moment = window.moment;
+            const displayFormat = 'YYYY-MM-DD';
+
+            const getPresetBounds = (key) => {
+                const now = moment();
+                if (key === '7d') {
+                    return [now.clone().subtract(6, 'days').startOf('day'), now.clone().endOf('day')];
+                }
+                if (key === '30d') {
+                    return [now.clone().subtract(29, 'days').startOf('day'), now.clone().endOf('day')];
+                }
+                if (key === '1y') {
+                    return [now.clone().subtract(1, 'year').startOf('day'), now.clone().endOf('day')];
+                }
+                return null;
+            };
+
+            let initialStart = null;
+            let initialEnd = null;
+            if (startInput.value && endInput.value) {
+                initialStart = moment(startInput.value);
+                initialEnd = moment(endInput.value);
+            } else {
+                const preset = getPresetBounds(windowInput.value);
+                if (preset) {
+                    initialStart = preset[0];
+                    initialEnd = preset[1];
+                }
+            }
+
+            if (!initialStart || !initialEnd) {
+                initialStart = moment().subtract(6, 'days').startOf('day');
+                initialEnd = moment().endOf('day');
+            }
+
+            const setDisplayValue = (mode, startDate, endDate) => {
+                const hasExplicitRange = Boolean(startInput.value && endInput.value);
+                if (mode === 'all' && !hasExplicitRange) {
+                    displayInput.value = 'All Time';
+                    return;
+                }
+                displayInput.value = startDate.format(displayFormat) + ' - ' + endDate.format(displayFormat);
+            };
+
+            $(displayInput).daterangepicker(
+                {
+                    startDate: initialStart,
+                    endDate: initialEnd,
+                    autoUpdateInput: false,
+                    alwaysShowCalendars: true,
+                    showDropdowns: false,
+                    showCustomRangeLabel: false,
+                    linkedCalendars: true,
+                    timePicker: false,
+                    locale: {
+                        format: displayFormat,
+                        cancelLabel: 'Clear',
+                    },
+                    ranges: {
+                        '7 Days': [moment().subtract(6, 'days').startOf('day'), moment().endOf('day')],
+                        '30 Days': [moment().subtract(29, 'days').startOf('day'), moment().endOf('day')],
+                        '1 Year': [moment().subtract(12, 'months').startOf('day'), moment().endOf('day')],
+                    },
+                }
+            );
+
+            const applyBootstrapPickerStyles = () => {
+                const picker = $(displayInput).data('daterangepicker');
+                if (!picker || !picker.container) {
+                    return;
+                }
+
+                const container = picker.container;
+                const buttons = container.find('.drp-buttons');
+
+                container.removeClass('p-2').addClass('border rounded shadow-sm bg-white');
+                container.find('.drp-calendar').removeClass('px-1');
+                container.find('.ranges').removeClass('w-100').addClass('pe-2');
+                container.find('.ranges ul').removeClass('d-flex flex-wrap gap-2 list-unstyled mb-0 ps-0');
+                container.find('.ranges li').removeClass('btn btn-link btn-sm text-decoration-none px-1 py-0 m-0');
+
+                const rangeItems = container.find('.ranges li');
+                rangeItems.off('click.rangePreview').on('click.rangePreview', function (event) {
+                    event.preventDefault();
+                    event.stopImmediatePropagation();
+
+                    const key = String($(this).data('range-key') || '');
+                    const selectedRange = picker.ranges ? picker.ranges[key] : null;
+                    if (!selectedRange) {
+                        return;
+                    }
+
+                    picker.chosenLabel = key;
+                    picker.setStartDate(selectedRange[0].clone());
+                    picker.setEndDate(selectedRange[1].clone());
+                    picker.updateView();
+                    picker.updateCalendars();
+                    picker.updateFormInputs();
+
+                    rangeItems.removeClass('active');
+                    $(this).addClass('active');
+                });
+
+                if (buttons.length) {
+                    buttons.removeClass('border-top pt-2 mt-2').addClass('d-flex justify-content-end align-items-center gap-2');
+                    buttons.find('.cancelBtn').removeClass('btn-default').addClass('btn btn-link btn-sm');
+                    buttons.find('.applyBtn').addClass('btn btn-primary btn-sm');
+                }
+            };
+
+            applyBootstrapPickerStyles();
+            $(displayInput).on('show.daterangepicker', applyBootstrapPickerStyles);
+
+            setDisplayValue(windowInput.value, initialStart, initialEnd);
+
+            const allTimeButton = document.getElementById('results-all-time-btn');
+            if (allTimeButton) {
+                allTimeButton.addEventListener('click', function () {
+                    windowInput.value = 'all';
+                    startInput.value = '';
+                    endInput.value = '';
+                    displayInput.value = 'All Time';
+                    form.submit();
+                });
+            }
+
+            $(displayInput).on('apply.daterangepicker', function (_ev, picker) {
+                const label = String(picker.chosenLabel || '');
+                const startUtc = picker.startDate.clone().startOf('day').utc();
+                const endUtc = picker.endDate.clone().endOf('day').utc();
+                startInput.value = startUtc.format('YYYY-MM-DDTHH:mm');
+                endInput.value = endUtc.format('YYYY-MM-DDTHH:mm');
+
+                if (label === '7 Days') {
+                    windowInput.value = '7d';
+                } else if (label === '30 Days') {
+                    windowInput.value = '30d';
+                } else if (label === '1 Year') {
+                    windowInput.value = '1y';
+                } else {
+                    windowInput.value = 'all';
+                }
+
+                setDisplayValue(windowInput.value, picker.startDate, picker.endDate);
+                form.submit();
+            });
+        });
+        </script>
     </body>
 </html>

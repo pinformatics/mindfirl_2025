@@ -1,5 +1,7 @@
 """Admin reporting helpers for CSV export and graph payload generation."""
 
+from datetime import datetime, timedelta, timezone
+
 import data_loader as dl
 import data_model as dm
 
@@ -16,7 +18,64 @@ from user_state import (
 )
 
 
-def build_redis_csv_rows(redis_client, filename):
+def _parse_snapshot_datetime(raw_value):
+    """Return a UTC-aware datetime parsed from snapshot saved_at."""
+    if not raw_value:
+        return None
+
+    normalized = str(raw_value).strip()
+    if not normalized:
+        return None
+
+    if normalized.endswith("Z"):
+        normalized = normalized[:-1] + "+00:00"
+
+    try:
+        parsed = datetime.fromisoformat(normalized)
+    except ValueError:
+        return None
+
+    if parsed.tzinfo is None:
+        return parsed.replace(tzinfo=timezone.utc)
+    return parsed.astimezone(timezone.utc)
+
+
+def summarize_response_datetime_range(rows):
+    """Return min/max UTC datetimes for rows that contain parseable timestamps."""
+    parsed_datetimes = []
+    for row in rows:
+        parsed = _parse_snapshot_datetime(row.get("datetime", ""))
+        if parsed is not None:
+            parsed_datetimes.append(parsed)
+
+    if not parsed_datetimes:
+        return {
+            "min_datetime": None,
+            "max_datetime": None,
+            "min_iso": "",
+            "max_iso": "",
+            "count_with_datetime": 0,
+        }
+
+    min_dt = min(parsed_datetimes)
+    max_dt = max(parsed_datetimes)
+    return {
+        "min_datetime": min_dt,
+        "max_datetime": max_dt,
+        "min_iso": min_dt.strftime("%Y-%m-%d %H:%M UTC"),
+        "max_iso": max_dt.strftime("%Y-%m-%d %H:%M UTC"),
+        "count_with_datetime": len(parsed_datetimes),
+    }
+
+
+def build_redis_csv_rows(
+    redis_client,
+    filename,
+    time_window_days=None,
+    start_datetime=None,
+    end_datetime=None,
+    experiment_name=None,
+):
     """Build export rows by combining Redis state with dataset metadata."""
     data_pairs = dl.load_data_from_csv(filename)
     data_pair_list = dm.DataPairList(data_pairs)
@@ -32,6 +91,10 @@ def build_redis_csv_rows(redis_client, filename):
 
     response_values = [redis_client.get(key) for key, _ in response_entries] if response_entries else []
 
+    cutoff = None
+    if time_window_days is not None:
+        cutoff = datetime.now(timezone.utc) - timedelta(days=time_window_days)
+
     rows = []
     for student_index, (response_key, user_id) in enumerate(response_entries):
         selection_string = response_values[student_index] or ""
@@ -40,6 +103,24 @@ def build_redis_csv_rows(redis_client, filename):
         snapshot_key = get_snapshot_key_for_response_key(response_key)
         snapshot = safe_parse_json(redis_client.get(snapshot_key), {})
         snapshot_reveal_levels = snapshot.get("pair_reveal_levels", {})
+        snapshot_datetime = _parse_snapshot_datetime(snapshot.get("saved_at", ""))
+        snapshot_experiment = str(snapshot.get("exp_name", "") or "").strip()
+
+        if experiment_name:
+            if snapshot_experiment != experiment_name:
+                continue
+
+        if start_datetime is not None or end_datetime is not None:
+            if snapshot_datetime is None:
+                continue
+            if start_datetime is not None and snapshot_datetime < start_datetime:
+                continue
+            if end_datetime is not None and snapshot_datetime > end_datetime:
+                continue
+        elif cutoff is not None:
+            # For bounded windows, keep only responses with known timestamp inside cutoff.
+            if snapshot_datetime is None or snapshot_datetime < cutoff:
+                continue
 
         if "character_disclosed_percent_value" in snapshot:
             character_disclosed_percent_value = float(snapshot.get("character_disclosed_percent_value", 0.0))
@@ -59,6 +140,7 @@ def build_redis_csv_rows(redis_client, filename):
         row = {
             "student_index": student_index + 1,
             "student_id": user_id,
+            "exp_name": snapshot_experiment,
             "datetime": snapshot.get("saved_at", ""),
             "character_disclosed_percent_value": character_disclosed_percent_value,
             "privacy_risk_percent_value": privacy_risk_percent_value,
@@ -95,7 +177,7 @@ def build_redis_csv_rows(redis_client, filename):
 
 def build_redis_csv_fieldnames(pair_numbers):
     """Return ordered CSV columns for the admin export."""
-    fieldnames = ["student_index", "student_id", "datetime"]
+    fieldnames = ["student_index", "student_id", "exp_name", "datetime"]
 
     for pair_index, _ in enumerate(pair_numbers):
         pair_num = pair_index + 1
@@ -515,7 +597,7 @@ def build_pair_record_details(filename):
     return pair_details
 
 
-def process_redis_data(redis_client, filename):
+def process_redis_data(redis_client, filename, time_window_days=None, start_datetime=None, end_datetime=None):
     """Build per-pair aggregated selection summaries for results view."""
     data_pairs = dl.load_data_from_csv(filename)
 
@@ -524,7 +606,36 @@ def process_redis_data(redis_client, filename):
     value_data = [[0, 0, 0, 0, 0, 0, 0] for _ in range(len(data_pairs))]
 
     if filename_keys:
-        filename_values = [redis_client.get(key) for key in filename_keys] or []
+        if start_datetime is not None or end_datetime is not None:
+            filtered_values = []
+            for key in filename_keys:
+                snapshot_key = get_snapshot_key_for_response_key(key)
+                snapshot = safe_parse_json(redis_client.get(snapshot_key), {})
+                snapshot_datetime = _parse_snapshot_datetime(snapshot.get("saved_at", ""))
+                if snapshot_datetime is None:
+                    continue
+                if start_datetime is not None and snapshot_datetime < start_datetime:
+                    continue
+                if end_datetime is not None and snapshot_datetime > end_datetime:
+                    continue
+                filtered_values.append(redis_client.get(key))
+            filename_values = filtered_values
+        elif time_window_days is not None:
+            cutoff = datetime.now(timezone.utc) - timedelta(days=time_window_days)
+            filtered_values = []
+            for key in filename_keys:
+                snapshot_key = get_snapshot_key_for_response_key(key)
+                snapshot = safe_parse_json(redis_client.get(snapshot_key), {})
+                snapshot_datetime = _parse_snapshot_datetime(snapshot.get("saved_at", ""))
+                if snapshot_datetime is None or snapshot_datetime < cutoff:
+                    continue
+                filtered_values.append(redis_client.get(key))
+            filename_values = filtered_values
+        else:
+            filename_values = [redis_client.get(key) for key in filename_keys] or []
+
+        if not filename_values:
+            return data_pairs, html_elements_list
 
         num_pairs = len(filename_values[0].split(","))
         data_len = len(data_pairs) / 2

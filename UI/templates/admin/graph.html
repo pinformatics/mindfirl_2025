@@ -5,58 +5,137 @@
 {% block header_back %}{% set header_back_url = url_for('admin_page') %}{% endblock %}
 
 {% block extra_head %}
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/daterangepicker/daterangepicker.css">
+<script src="https://cdn.jsdelivr.net/npm/jquery@3.7.1/dist/jquery.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/moment@2.30.1/min/moment.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/daterangepicker/daterangepicker.min.js"></script>
+<script src="{{ url_for('static', filename='javascript/bootstrap.min.js') }}"></script>
+<style>
+.graph-help-tooltip {
+    --bs-tooltip-max-width: 720px;
+}
+
+.graph-help-tooltip .tooltip-inner {
+    text-align: left;
+    white-space: normal;
+    padding: 0.7rem 0.9rem;
+}
+
+#graph-range-form {
+    width: 100%;
+}
+
+@media (min-width: 992px) {
+    #graph-summary-block {
+        padding-right: 1.5rem;
+    }
+
+    #graph-range-form {
+        width: auto;
+        margin-left: auto;
+    }
+}
+</style>
 <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/@sgratzl/chartjs-chart-boxplot"></script>
 {% endblock %}
 
 {% block content %}
-<main class="container py-4" style="max-width: 1080px;">
-    <div class="alert alert-info mb-4" role="alert">
-        Students included: <strong>{{ student_count }}</strong>
+<main class="container-fluid py-2" style="padding-inline: clamp(2.5rem, 6vw, 8rem) !important;">
+    <div class="alert alert-info p-3 mb-2" role="alert">
+        <div class="d-flex flex-column flex-lg-row justify-content-between align-items-lg-center gap-3">
+            <div id="graph-summary-block" class="flex-grow-1">
+                <div class="fs-6">Responses included: <strong>{{ student_count }}</strong> <span class="ms-2 badge text-bg-light">{{ window_label }}</span></div>
+                <div class="mt-2">
+                    {% if has_datetime_range %}
+                        {% if selected_exp_name %}
+                        Showing Experiment: <strong>{{ selected_exp_name }}</strong> | Range: <strong>{{ min_datetime_display }}</strong> to <strong>{{ max_datetime_display }}</strong>
+                        {% elif has_custom_range %}
+                        Showing Range: <strong>{{ min_datetime_display }}</strong> to <strong>{{ max_datetime_display }}</strong>
+                        {% else %}
+                        Showing {{ window_label }} | Range: <strong>{{ min_datetime_display }}</strong> to <strong>{{ max_datetime_display }}</strong>
+                        {% endif %}
+                    {% else %}
+                    Showing: <strong>No timestamped responses found for current selection.</strong>
+                    {% endif %}
+                </div>
+            </div>
+            <form id="graph-range-form" action="{{ url_for('export_graph_view') }}" method="get" class="d-flex flex-wrap flex-lg-nowrap align-items-center justify-content-lg-end gap-2 p-3 bg-white border rounded shadow-sm" style="max-width: 100%;">
+                <input id="graph-window" type="hidden" name="window" value="{{ window_key|default('all') }}">
+                <input id="graph-start" type="hidden" name="start" value="{{ custom_start_value|default('') }}">
+                <input id="graph-end" type="hidden" name="end" value="{{ custom_end_value|default('') }}">
+                <label class="small fw-semibold mb-0 text-nowrap flex-shrink-0" for="graph-exp-name">Experiment</label>
+                <select id="graph-exp-name" name="exp_name" class="form-select form-select-sm" style="min-width: 190px; max-width: 260px; flex: 0 0 220px;">
+                    <option value="" {% if not selected_exp_name %}selected{% endif %}>All Experiments</option>
+                    {% for exp_name in experiment_names %}
+                    <option value="{{ exp_name }}" {% if selected_exp_name == exp_name %}selected{% endif %}>{{ exp_name }}</option>
+                    {% endfor %}
+                    <option value="__add_experiment__">+ Experiment</option>
+                </select>
+                <label class="small fw-semibold mb-0 text-nowrap flex-shrink-0" for="graph-range-display">Date Range</label>
+                <input id="graph-range-display" type="text" class="form-control form-control-sm fw-semibold" style="min-width: 220px; flex: 1 1 260px;" readonly>
+                <button id="graph-all-time-btn" type="button" class="btn btn-outline-secondary btn-sm flex-shrink-0">All Time</button>
+                <button id="graph-clear-filters-btn" type="button" class="btn btn-outline-danger btn-sm flex-shrink-0">Clear</button>
+            </form>
+        </div>
     </div>
 
-    <div class="row g-4">
-        <div class="col-12">
+    <div class="row g-3">
+        <div class="col-12 col-xxl-8">
             <div class="card shadow-sm h-100">
                 <div class="card-body position-relative">
                     <div class="d-flex justify-content-between align-items-center mb-3">
-                        <h2 class="h5 mb-0">Privacy-Utility Frontier (Pair Level)</h2>
+                        <h2 class="h5 mb-0">Privacy-Utility Frontier (Pair Level)
+                            <button type="button" class="btn btn-link btn-sm p-0 ms-1 align-baseline text-secondary text-decoration-none" data-bs-toggle="tooltip" data-bs-trigger="hover focus click" data-bs-placement="top" data-bs-title="Each point is a pair. X-axis is disclosure percent = (pair average reveal level / 2) * 100. Y-axis is consensus percent = 100 * (max response votes / total responses for that pair). Higher-right means higher disclosure and higher agreement." aria-label="Privacy-Utility Frontier explanation">?</button>
+                        </h2>
                         <button class="btn btn-sm btn-outline-primary" type="button" data-export-target="privacyUtilityFrontierChart" data-export-name="privacy_utility_frontier">Export PNG</button>
                     </div>
-                    <canvas id="privacyUtilityFrontierChart" height="190"></canvas>
+                    <div class="ratio" style="--bs-aspect-ratio: 58%;">
+                        <canvas id="privacyUtilityFrontierChart" class="w-100 h-100"></canvas>
+                    </div>
                 </div>
             </div>
         </div>
 
-        <div class="col-12">
+        <div class="col-12 col-xxl-4">
             <div class="card shadow-sm h-100">
                 <div class="card-body">
                     <div class="d-flex justify-content-between align-items-center mb-3">
-                        <h2 class="h5 mb-0">Budget Efficiency Summary</h2>
+                        <h2 class="h5 mb-0">Budget Efficiency Summary
+                            <button type="button" class="btn btn-link btn-sm p-0 ms-1 align-baseline text-secondary text-decoration-none" data-bs-toggle="tooltip" data-bs-trigger="hover focus click" data-bs-placement="top" data-bs-title="Three paper-aligned aggregates: Avg Character Disclosure % = sum(character_disclosed_percent_value) / number of respondents; High-Consensus Pair Rate % = 100 * pairs with consensus >= 75% / reviewed pairs; Pairs Reviewed % = 100 * reviewed pairs / total pairs." aria-label="Budget Efficiency explanation">?</button>
+                        </h2>
                         <button class="btn btn-sm btn-outline-primary" type="button" data-export-target="budgetEfficiencyChart" data-export-name="budget_efficiency_summary">Export PNG</button>
                     </div>
-                    <canvas id="budgetEfficiencyChart" height="190"></canvas>
+                    <div class="ratio" style="--bs-aspect-ratio: 58%;">
+                        <canvas id="budgetEfficiencyChart" class="w-100 h-100"></canvas>
+                    </div>
                 </div>
             </div>
         </div>
 
-        <div class="col-12">
+        <div class="col-12 col-xxl-4">
             <div class="card shadow-sm h-100">
                 <div class="card-body">
                     <div class="d-flex justify-content-between align-items-center mb-3">
-                        <h2 class="h5 mb-0">Field Disclosure Contribution</h2>
+                        <h2 class="h5 mb-0">Field Disclosure Contribution
+                            <button type="button" class="btn btn-link btn-sm p-0 ms-1 align-baseline text-secondary text-decoration-none" data-bs-toggle="tooltip" data-bs-trigger="hover focus click" data-bs-placement="top" data-bs-title="For each attribute field across all reviewed pairs: Disclosure Pressure % = ((count(level1) + 2*count(level2)) / total) / 2 * 100. Partial/Full Exposure % = 100 * (count(level1) + count(level2)) / total." aria-label="Field Disclosure Contribution explanation">?</button>
+                        </h2>
                         <button class="btn btn-sm btn-outline-primary" type="button" data-export-target="fieldContributionChart" data-export-name="field_disclosure_contribution">Export PNG</button>
                     </div>
-                    <canvas id="fieldContributionChart" height="170"></canvas>
+                    <div class="ratio" style="--bs-aspect-ratio: 58%;">
+                        <canvas id="fieldContributionChart" class="w-100 h-100"></canvas>
+                    </div>
                 </div>
             </div>
         </div>
 
-        <div class="col-12">
+        <div class="col-12 col-xxl-8">
             <div class="card shadow-sm h-100">
                 <div class="card-body">
                     <div class="d-flex justify-content-between align-items-center mb-3">
-                        <h2 class="h5 mb-0">Reviewer Strategy Profiles (Disclosure vs Risk)</h2>
+                        <h2 class="h5 mb-0">Reviewer Strategy Profiles (Disclosure vs Risk)
+                            <button type="button" class="btn btn-link btn-sm p-0 ms-1 align-baseline text-secondary text-decoration-none" data-bs-toggle="tooltip" data-bs-trigger="hover focus click" data-bs-placement="top" data-bs-title="Each point is one reviewer. Toggle between Disclosure Budget Use (%) and KAPR Risk (%). This view compares reviewer behavior across privacy cost and risk dimensions using respondent-level summary metrics." aria-label="Reviewer Strategy Profiles explanation">?</button>
+                        </h2>
                         <div class="d-flex align-items-center gap-2">
                             <div class="btn-group btn-group-sm" role="group" aria-label="Respondent metric toggle">
                                 <button id="respondentToggleDisclosed" type="button" class="btn btn-outline-success active">Disclosure Budget Use (%)</button>
@@ -65,31 +144,41 @@
                             <button class="btn btn-sm btn-outline-primary" type="button" data-export-target="studentScoreChart" data-export-name="student_scores">Export PNG</button>
                         </div>
                     </div>
-                    <canvas id="studentScoreChart" height="170"></canvas>
+                    <div class="ratio" style="--bs-aspect-ratio: 58%;">
+                        <canvas id="studentScoreChart" class="w-100 h-100"></canvas>
+                    </div>
                 </div>
             </div>
         </div>
 
-        <div class="col-12">
+        <div class="col-12 col-xl-6">
             <div class="card shadow-sm h-100">
                 <div class="card-body">
                     <div class="d-flex justify-content-between align-items-center mb-3">
-                        <h2 class="h5 mb-0">Response Distribution by Pair Difficulty</h2>
+                        <h2 class="h5 mb-0">Response Distribution by Pair Difficulty
+                            <button type="button" class="btn btn-link btn-sm p-0 ms-1 align-baseline text-secondary text-decoration-none" data-bs-toggle="tooltip" data-bs-trigger="hover focus click" data-bs-placement="top" data-bs-title="Pairs are bucketed by consensus: Hard (<50%), Medium (50%-<75%), Easy (>=75%), where consensus = max response share for a pair. Bars show how 1-6 responses are distributed within each bucket." aria-label="Response Distribution by Pair Difficulty explanation">?</button>
+                        </h2>
                         <button class="btn btn-sm btn-outline-primary" type="button" data-export-target="difficultyResponseChart" data-export-name="response_by_difficulty">Export PNG</button>
                     </div>
-                    <canvas id="difficultyResponseChart" height="150"></canvas>
+                    <div class="ratio" style="--bs-aspect-ratio: 58%;">
+                        <canvas id="difficultyResponseChart" class="w-100 h-100"></canvas>
+                    </div>
                 </div>
             </div>
         </div>
 
-        <div class="col-12">
+        <div class="col-12 col-xl-6">
             <div class="card shadow-sm h-100">
                 <div class="card-body">
                     <div class="d-flex justify-content-between align-items-center mb-3">
-                        <h2 class="h5 mb-0">Response Distribution by Pair (1-6)</h2>
+                        <h2 class="h5 mb-0">Response Distribution by Pair (1-6)
+                            <button type="button" class="btn btn-link btn-sm p-0 ms-1 align-baseline text-secondary text-decoration-none" data-bs-toggle="tooltip" data-bs-trigger="hover focus click" data-bs-placement="top" data-bs-title="Stacked bars show counts of response codes 1-6 for each pair. Pairs are ordered by weighted average response score (higher means more same-record judgments) and then by total responses." aria-label="Response Distribution by Pair explanation">?</button>
+                        </h2>
                         <button class="btn btn-sm btn-outline-primary" type="button" data-export-target="responseChart" data-export-name="response_distribution">Export PNG</button>
                     </div>
-                    <canvas id="responseChart" height="150"></canvas>
+                    <div class="ratio" style="--bs-aspect-ratio: 58%;">
+                        <canvas id="responseChart" class="w-100 h-100"></canvas>
+                    </div>
                 </div>
             </div>
         </div>
@@ -98,12 +187,16 @@
             <div class="card shadow-sm">
                 <div class="card-body position-relative">
                     <div class="d-flex justify-content-between align-items-center mb-3">
-                        <h2 id="revealLevelsTitle" class="h5 mb-0">Average Reveal Level by Pair and Field</h2>
+                        <h2 id="revealLevelsTitle" class="h5 mb-0"><span id="revealLevelsTitleText">Average Reveal Level by Pair and Field</span>
+                            <button type="button" class="btn btn-link btn-sm p-0 ms-1 align-baseline text-secondary text-decoration-none" data-bs-toggle="tooltip" data-bs-trigger="hover focus click" data-bs-placement="top" data-bs-title="Box-whisker chart of reveal levels (0,1,2) per pair. Whiskers and quartiles summarize disclosure spread; tooltip shows min, Q1, median, Q3, max, mean, and n. Hover labels to inspect source record details." aria-label="Reveal Levels explanation">?</button>
+                        </h2>
                         <div class="d-flex align-items-center gap-2">
                             <button class="btn btn-sm btn-outline-primary" type="button" data-export-target="revealLevelsChart" data-export-name="average_reveal_levels">Export PNG</button>
                         </div>
                     </div>
-                    <canvas id="revealLevelsChart" height="130"></canvas>
+                    <div class="ratio" style="--bs-aspect-ratio: 40%;">
+                        <canvas id="revealLevelsChart" class="w-100 h-100"></canvas>
+                    </div>
                     <div id="pairHoverDetails" class="position-absolute start-0 top-0 border bg-white shadow rounded-2 p-2 small d-none pe-none" style="z-index:30;">
                     </div>
                 </div>
@@ -118,6 +211,250 @@
 {% block scripts %}
 <script>
 document.addEventListener('DOMContentLoaded', function () {
+if (window.bootstrap && typeof window.bootstrap.Tooltip === 'function') {
+    document.querySelectorAll('[data-bs-toggle="tooltip"]').forEach(function (el) {
+        new window.bootstrap.Tooltip(el, {
+            container: 'body',
+            boundary: 'window',
+            customClass: 'graph-help-tooltip',
+            template: '<div class="tooltip" role="tooltip"><div class="tooltip-arrow"></div><div class="tooltip-inner text-start"></div></div>'
+        });
+    });
+}
+
+const initDateRangePicker = () => {
+    if (!window.jQuery || !window.moment || !window.jQuery.fn.daterangepicker) {
+        return;
+    }
+
+    const form = document.getElementById('graph-range-form');
+    const windowInput = document.getElementById('graph-window');
+    const startInput = document.getElementById('graph-start');
+    const endInput = document.getElementById('graph-end');
+    const displayInput = document.getElementById('graph-range-display');
+    if (!form || !windowInput || !startInput || !endInput || !displayInput) {
+        return;
+    }
+
+    const $ = window.jQuery;
+    const moment = window.moment;
+    const displayFormat = 'YYYY-MM-DD';
+
+    const getPresetBounds = (key) => {
+        const now = moment();
+        if (key === '1d') {
+            return [now.clone().startOf('day'), now.clone().endOf('day')];
+        }
+        if (key === '7d') {
+            return [now.clone().subtract(6, 'days').startOf('day'), now.clone().endOf('day')];
+        }
+        if (key === '30d') {
+            return [now.clone().subtract(29, 'days').startOf('day'), now.clone().endOf('day')];
+        }
+        if (key === '1y') {
+            return [now.clone().subtract(1, 'year').startOf('day'), now.clone().endOf('day')];
+        }
+        return null;
+    };
+
+    let initialStart = null;
+    let initialEnd = null;
+    if (startInput.value && endInput.value) {
+        initialStart = moment(startInput.value);
+        initialEnd = moment(endInput.value);
+    } else {
+        const preset = getPresetBounds(windowInput.value);
+        if (preset) {
+            initialStart = preset[0];
+            initialEnd = preset[1];
+        }
+    }
+
+    if (!initialStart || !initialEnd) {
+        initialStart = moment().subtract(6, 'days').startOf('day');
+        initialEnd = moment().endOf('day');
+    }
+
+    const setDisplayValue = (mode, startDate, endDate) => {
+        const hasExplicitRange = Boolean(startInput.value && endInput.value);
+        if (mode === 'all' && !hasExplicitRange) {
+            displayInput.value = 'All Time';
+            return;
+        }
+        displayInput.value = startDate.format(displayFormat) + ' - ' + endDate.format(displayFormat);
+    };
+
+    $(displayInput).daterangepicker(
+        {
+            startDate: initialStart,
+            endDate: initialEnd,
+            autoUpdateInput: false,
+            alwaysShowCalendars: true,
+            showDropdowns: false,
+            showCustomRangeLabel: false,
+            linkedCalendars: true,
+            timePicker: false,
+            locale: {
+                format: displayFormat,
+                cancelLabel: 'Clear',
+            },
+            ranges: {
+                '1 Day': [moment().startOf('day'), moment().endOf('day')],
+                '7 Days': [moment().subtract(6, 'days').startOf('day'), moment().endOf('day')],
+                '30 Days': [moment().subtract(29, 'days').startOf('day'), moment().endOf('day')],
+                '1 Year': [moment().subtract(12, 'months').startOf('day'), moment().endOf('day')],
+            },
+        }
+    );
+
+    const applyBootstrapPickerStyles = () => {
+        const picker = $(displayInput).data('daterangepicker');
+        if (!picker || !picker.container) {
+            return;
+        }
+
+        const container = picker.container;
+        const buttons = container.find('.drp-buttons');
+
+        container.removeClass('p-2').addClass('border rounded shadow-sm bg-white');
+        container.find('.drp-calendar').removeClass('px-1');
+        container.find('.ranges').removeClass('w-100').addClass('pe-2');
+        container.find('.ranges ul').removeClass('d-flex flex-wrap gap-2 list-unstyled mb-0 ps-0');
+        container.find('.ranges li').removeClass('btn btn-link btn-sm text-decoration-none px-1 py-0 m-0');
+
+        const rangeItems = container.find('.ranges li');
+        rangeItems.off('click.rangePreview').on('click.rangePreview', function (event) {
+            event.preventDefault();
+            event.stopImmediatePropagation();
+
+            const key = String($(this).data('range-key') || '');
+            const selectedRange = picker.ranges ? picker.ranges[key] : null;
+            if (!selectedRange) {
+                return;
+            }
+
+            picker.chosenLabel = key;
+            picker.setStartDate(selectedRange[0].clone());
+            picker.setEndDate(selectedRange[1].clone());
+            picker.updateView();
+            picker.updateCalendars();
+            picker.updateFormInputs();
+
+            rangeItems.removeClass('active');
+            $(this).addClass('active');
+        });
+
+        if (buttons.length) {
+            buttons.removeClass('border-top pt-2 mt-2').addClass('d-flex justify-content-end align-items-center gap-2');
+            buttons.find('.cancelBtn').removeClass('btn-default').addClass('btn btn-link btn-sm');
+            buttons.find('.applyBtn').addClass('btn btn-primary btn-sm');
+        }
+    };
+
+    applyBootstrapPickerStyles();
+    $(displayInput).on('show.daterangepicker', applyBootstrapPickerStyles);
+
+    setDisplayValue(windowInput.value, initialStart, initialEnd);
+
+    const allTimeButton = document.getElementById('graph-all-time-btn');
+    const clearFiltersButton = document.getElementById('graph-clear-filters-btn');
+    const experimentSelect = document.getElementById('graph-exp-name');
+
+    if (allTimeButton) {
+        allTimeButton.addEventListener('click', function () {
+            windowInput.value = 'all';
+            startInput.value = '';
+            endInput.value = '';
+            displayInput.value = 'All Time';
+            form.submit();
+        });
+    }
+
+    if (clearFiltersButton) {
+        clearFiltersButton.addEventListener('click', function () {
+            windowInput.value = 'all';
+            startInput.value = '';
+            endInput.value = '';
+            displayInput.value = 'All Time';
+            if (experimentSelect) {
+                experimentSelect.value = '';
+            }
+            form.submit();
+        });
+    }
+
+    if (experimentSelect) {
+        experimentSelect.addEventListener('change', function () {
+            if (experimentSelect.value === '__add_experiment__') {
+                window.location.href = "{{ url_for('experiments_page') }}";
+                return;
+            }
+            form.submit();
+        });
+    }
+
+    $(displayInput).on('apply.daterangepicker', function (_ev, picker) {
+        const label = String(picker.chosenLabel || '');
+        const startUtc = picker.startDate.clone().startOf('day').utc();
+        const endUtc = picker.endDate.clone().endOf('day').utc();
+        startInput.value = startUtc.format('YYYY-MM-DDTHH:mm');
+        endInput.value = endUtc.format('YYYY-MM-DDTHH:mm');
+
+        if (label === '1 Day') {
+            windowInput.value = '1d';
+        } else if (label === '7 Days') {
+            windowInput.value = '7d';
+        } else if (label === '30 Days') {
+            windowInput.value = '30d';
+        } else if (label === '1 Year') {
+            windowInput.value = '1y';
+        } else {
+            windowInput.value = 'all';
+        }
+
+        setDisplayValue(windowInput.value, picker.startDate, picker.endDate);
+        form.submit();
+    });
+
+    $(displayInput).on('cancel.daterangepicker', function (_ev, picker) {
+        windowInput.value = 'all';
+        startInput.value = '';
+        endInput.value = '';
+        displayInput.value = 'All Time';
+
+        if (picker) {
+            picker.setStartDate(moment().subtract(6, 'days').startOf('day'));
+            picker.setEndDate(moment().endOf('day'));
+            picker.updateView();
+            picker.updateCalendars();
+        }
+
+        form.submit();
+    });
+};
+
+initDateRangePicker();
+
+const resizeVisibleCharts = () => {
+    if (!window.Chart || !Chart.instances) {
+        return;
+    }
+
+    Object.values(Chart.instances).forEach((chart) => {
+        if (!chart || !chart.canvas) {
+            return;
+        }
+
+        const panel = chart.canvas.closest('.graph-panel');
+        if (panel && panel.classList.contains('d-none')) {
+            return;
+        }
+
+        chart.resize();
+        chart.update('none');
+    });
+};
+
 const payloadElement = document.getElementById('graph-data-json');
 if (!payloadElement) {
     return;
@@ -204,7 +541,7 @@ const commonPluginOptions = {
     }
 };
 
-const revealTitleElement = document.getElementById('revealLevelsTitle');
+const revealTitleTextElement = document.getElementById('revealLevelsTitleText');
 const boxWhiskerSupported = !!Chart.registry.getController('boxplot');
 const revealPairLabels = graphData.reveal_pair_labels || graphData.pair_labels || [];
 const revealPairStats = graphData.reveal_pair_stats || [];
@@ -293,24 +630,35 @@ const renderPairHoverDetails = (pairIndex) => {
     pairHoverDetails.classList.remove('d-none');
 };
 
-const positionPairHoverOverlay = (event) => {
+const positionPairHoverOverlay = (event, chart) => {
     if (!pairHoverDetails || !pairHoverDetails.parentElement) {
         return;
     }
 
-    const containerRect = pairHoverDetails.parentElement.getBoundingClientRect();
+    const parentRect = pairHoverDetails.parentElement.getBoundingClientRect();
+    const canvasRect = chart && chart.canvas ? chart.canvas.getBoundingClientRect() : null;
+    const chartArea = chart && chart.chartArea ? chart.chartArea : null;
     const nativeEvent = event && event.native ? event.native : null;
 
     let left = 16;
     let top = 62;
 
-    if (nativeEvent && typeof nativeEvent.clientX === 'number' && typeof nativeEvent.clientY === 'number') {
-        left = nativeEvent.clientX - containerRect.left + 12;
-        top = nativeEvent.clientY - containerRect.top - 10;
+    if (nativeEvent && typeof nativeEvent.clientX === 'number') {
+        left = nativeEvent.clientX - parentRect.left + 12;
+    }
+
+    if (canvasRect && chartArea) {
+        // Keep details near the bottom x-axis area for the hovered pair.
+        top = (canvasRect.top - parentRect.top) + chartArea.bottom + 12;
+    } else if (nativeEvent && typeof nativeEvent.clientY === 'number') {
+        top = nativeEvent.clientY - parentRect.top - 10;
     }
 
     pairHoverDetails.style.left = `${Math.max(12, left)}px`;
-    pairHoverDetails.style.top = `${Math.max(56, top)}px`;
+    const minTop = 56;
+    const maxTop = (pairHoverDetails.parentElement.clientHeight || 0) - (pairHoverDetails.offsetHeight || 0) - 12;
+    const clampedTop = maxTop > minTop ? Math.min(Math.max(minTop, top), maxTop) : Math.max(minTop, top);
+    pairHoverDetails.style.top = `${clampedTop}px`;
 
     const maxLeft = (pairHoverDetails.parentElement.clientWidth || 0) - (pairHoverDetails.offsetWidth || 0) - 12;
     if (maxLeft > 12) {
@@ -334,7 +682,7 @@ const handleRevealChartHover = (event, activeElements, chart) => {
     if (pairIndex !== null) {
         setHighlightedPairIndex(pairIndex);
         renderPairHoverDetails(pairIndex);
-        positionPairHoverOverlay(event);
+        positionPairHoverOverlay(event, chart);
     } else {
         maybeHidePairHoverOverlay();
     }
@@ -384,14 +732,14 @@ const renderRevealLevelsChart = (mode) => {
     }
 
     if (!boxWhiskerSupported) {
-        if (revealTitleElement) {
-            revealTitleElement.textContent = 'Reveal Level by Pair (Box-Whisker Unavailable)';
+        if (revealTitleTextElement) {
+            revealTitleTextElement.textContent = 'Reveal Level by Pair (Box-Whisker Unavailable)';
         }
         return;
     }
 
-    if (revealTitleElement) {
-        revealTitleElement.textContent = 'Reveal Level by Pair (Box-Whisker)';
+    if (revealTitleTextElement) {
+        revealTitleTextElement.textContent = 'Reveal Level by Pair (Box-Whisker)';
     }
 
     const revealDistribution = graphData.reveal_distribution || [];
@@ -900,6 +1248,8 @@ document.querySelectorAll('button[data-export-target]').forEach(function(button)
         document.body.removeChild(link);
     });
 });
+
+resizeVisibleCharts();
 });
 </script>
 {% endblock %}
