@@ -101,8 +101,8 @@ $(document).ready(function() {
             return response.json();
         })
         .then(() => {
-            alert("Thank you for participating! Your submissions have been recorded. " +
-                "If you would like to change your submissions, you may do so and then resubmit anytime.");
+            alert("Thank you for participating! Your submissions have been recorded.");
+            window.location.reload();
         })
         .catch(() => {
             alert("Submission failed. Please make sure all responses are filled and try again.");
