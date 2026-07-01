@@ -8,6 +8,7 @@ on:
   push:
     branches:
       - tee
+      - tee-dev
     paths:
       - 'UI/**'
       - '.github/workflows/tee_mindfirl-2026.yml'
@@ -59,21 +60,38 @@ jobs:
       # 2. Refer to sample workflows for alternative deployment strategies: https://github.com/Azure/actions-workflow-samples/tree/master/AppService
       
 
-  deploy:
+  deploy_tee:
     runs-on: ubuntu-latest
     needs: build
-    
+    if: github.ref_name == 'tee'
+    steps:
+      - name: Download artifact from build job
+        uses: actions/download-artifact@v4
+        with:
+          name: python-app
+
+      - name: 'Deploy tee to Azure Web App'
+        uses: azure/webapps-deploy@v3
+        id: deploy-to-webapp
+        with:
+          app-name: 'mindfirl-2026'
+          publish-profile: ${{ secrets.AZUREAPPSERVICE_PUBLISHPROFILE_TEE }}
+          package: app.zip
+
+  deploy_tee_dev:
+    runs-on: ubuntu-latest
+    needs: build
+    if: github.ref_name == 'tee-dev'
     steps:
       - name: Download artifact from build job
         uses: actions/download-artifact@v4
         with:
           name: python-app
       
-      - name: 'Deploy to Azure Web App'
+      - name: 'Deploy tee-dev to Azure Web App'
         uses: azure/webapps-deploy@v3
         id: deploy-to-webapp
         with:
-          app-name: 'mindfirl-2026'
-          slot-name: 'Production'
+          app-name: 'mindfirl-2026-fix'
           publish-profile: ${{ secrets.AZUREAPPSERVICE_PUBLISHPROFILE_73C1B3492C1A48EFA3826B5077C1E6F3 }}
           package: app.zip
