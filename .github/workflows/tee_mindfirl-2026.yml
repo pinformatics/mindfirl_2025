@@ -75,7 +75,7 @@ jobs:
         id: deploy-to-webapp
         with:
           app-name: 'mindfirl-2026'
-          publish-profile: ${{ secrets.AZUREAPPSERVICE_PUBLISHPROFILE_TEE }}
+          publish-profile: ${{ secrets.AZUREAPPSERVICE_PUBLISHPROFILE }}
           package: app.zip
 
   deploy_tee_dev:
