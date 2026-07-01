@@ -103,7 +103,6 @@ $(document).ready(function() {
         .then(() => {
             alert("Thank you for participating! Your submissions have been recorded. " +
                 "If you would like to change your submissions, you may do so and then resubmit anytime.");
-            window.location.href = "/";
         })
         .catch(() => {
             alert("Submission failed. Please make sure all responses are filled and try again.");
