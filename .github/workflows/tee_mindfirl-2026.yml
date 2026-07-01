@@ -74,6 +74,5 @@ jobs:
         id: deploy-to-webapp
         with:
           app-name: 'mindfirl-2026-fix'
-          slot-name: 'Production'
           publish-profile: ${{ secrets.AZUREAPPSERVICE_PUBLISHPROFILE_73C1B3492C1A48EFA3826B5077C1E6F3 }}
           package: app.zip
