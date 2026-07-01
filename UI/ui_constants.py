@@ -1,7 +1,9 @@
 """Shared constants for the UI Flask application."""
 
-DATA_PATH = "data/ppirl.csv"
-SECTION2_PATH = "data/section2.csv"
+DATA_PATH = "data/ppirl_demo.csv"
+SECTION2_PATH = "data/section2_demo.csv"
+PRIVACY_DATA_PATH = "data/ppirl_priv.csv"
+PRIVACY_SECTION2_PATH = "data/section2_priv.csv"
 
 ATTRIBUTE_COLUMNS = [
     ("ID", "id_reveal_level"),

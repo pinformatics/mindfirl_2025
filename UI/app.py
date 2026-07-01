@@ -29,6 +29,8 @@ from ui_constants import (
     ADMIN_MAX_FAILED_ATTEMPTS,
     ATTRIBUTE_COLUMNS,
     DATA_PATH,
+    PRIVACY_DATA_PATH,
+    PRIVACY_SECTION2_PATH,
     SECTION2_PATH,
 )
 from user_state import (
@@ -135,10 +137,10 @@ def admin_required(handler):
     return decorated_function
 
 
-def _build_results_context(user_id, disclosure_setting):
+def _build_results_context(user_id, disclosure_setting, data_path, section2_path):
     """Initialize a user session and return data needed for results templates."""
-    data_pairs = dl.load_data_from_csv(DATA_PATH)
-    dataset = dl.load_data_from_csv(SECTION2_PATH)
+    data_pairs = dl.load_data_from_csv(data_path)
+    dataset = dl.load_data_from_csv(section2_path)
 
     data_pair_list = dm.DataPairList(data_pairs)
     pairs_formatted = data_pair_list.get_data_display(disclosure_setting)
@@ -181,12 +183,12 @@ def _build_results_context(user_id, disclosure_setting):
     }
 
 
-def _display_results_page(filename, template_name, disclosure_setting):
+def _display_results_page(data_path, section2_path, template_name, disclosure_setting):
     """Render an interactive results page and initialize user session keys."""
     user_id = request.cookies.get("user_id") or str(uuid.uuid4())
 
     try:
-        context = _build_results_context(user_id, disclosure_setting)
+        context = _build_results_context(user_id, disclosure_setting, data_path, section2_path)
     except redis.ConnectionError as exc:
         return (
             "Redis connection failed: {}. Configure REDIS_URL in UI/.env or run a local Redis instance."
@@ -194,7 +196,7 @@ def _display_results_page(filename, template_name, disclosure_setting):
             500,
         )
     except Exception as exc:
-        return "Can not open invalid or nonexistent file {} {} {}".format(filename, exc, os.getcwd()), 500
+        return "Can not open invalid or nonexistent file {} {} {}".format(data_path, exc, os.getcwd()), 500
 
     logging.error("display_results_page{}".format(user_id))
 
@@ -212,9 +214,17 @@ def _display_results_page(filename, template_name, disclosure_setting):
             marker_position=int(settings["privacy_budget"]),
         )
     )
+    active_dataset = "privacy" if data_path == PRIVACY_DATA_PATH else "irl"
     response.set_cookie(
         "user_id",
         user_id,
+        secure=app.config["SESSION_COOKIE_SECURE"],
+        httponly=True,
+        samesite=app.config["SESSION_COOKIE_SAMESITE"],
+    )
+    response.set_cookie(
+        "active_dataset",
+        active_dataset,
         secure=app.config["SESSION_COOKIE_SECURE"],
         httponly=True,
         samesite=app.config["SESSION_COOKIE_SAMESITE"],
@@ -920,22 +930,29 @@ def index():
     return render_template("landing.html", title="MiNDFIRL")
 
 
+def get_active_paths():
+    """Return (data_path, section2_path) for the current session's dataset."""
+    if request.cookies.get("active_dataset") == "privacy":
+        return PRIVACY_DATA_PATH, PRIVACY_SECTION2_PATH
+    return DATA_PATH, SECTION2_PATH
+
+
 @app.route("/disclosing_desktop")
 def disclosing_desktop():
     """Serve desktop UI with full disclosure mode."""
-    return _display_results_page(DATA_PATH, "desktop_base/base.html", "full")
+    return _display_results_page(DATA_PATH, SECTION2_PATH, "desktop_base/base.html", "full")
 
 
 @app.route("/mobile")
 def mobile():
     """Serve mobile UI with full disclosure mode."""
-    return _display_results_page(DATA_PATH, "mobile_base/mobile.html", "full")
+    return _display_results_page(DATA_PATH, SECTION2_PATH, "mobile_base/mobile.html", "full")
 
 
 @app.route("/privacy_desktop")
 def privacy_desktop():
     """Serve desktop UI with privacy-preserving display mode."""
-    return _display_results_page(DATA_PATH, "desktop_privacypreserving/base_privacy.html", "masked")
+    return _display_results_page(PRIVACY_DATA_PATH, PRIVACY_SECTION2_PATH, "desktop_privacypreserving/base_privacy.html", "masked")
 
 
 @app.route("/admin/results")
@@ -999,7 +1016,8 @@ def update_selection():
 
     user_selections = load_temp_selections(r, user_id)
     if not user_selections:
-        pair_count = len(dl.load_data_from_csv(DATA_PATH)) // 2
+        active_data_path, _ = get_active_paths()
+        pair_count = len(dl.load_data_from_csv(active_data_path)) // 2
         user_selections = ["" for _ in range(pair_count)]
 
     if index < 0 or index >= len(user_selections):
@@ -1036,10 +1054,11 @@ def submit_selections():
             ),
         ), 400
 
-    response_key = "id:" + user_id + "___file:" + DATA_PATH
+    active_data_path, _ = get_active_paths()
+    response_key = "id:" + user_id + "___file:" + active_data_path
     r.set(response_key, ",".join(user_selections))
 
-    current_data_pairs = dl.load_data_from_csv(DATA_PATH)
+    current_data_pairs = dl.load_data_from_csv(active_data_path)
     current_data_pair_list = dm.DataPairList(current_data_pairs)
     pair_numbers = get_pair_numbers(current_data_pairs)
     partial_level_flags = get_partial_level_flags(current_data_pair_list)
@@ -1084,8 +1103,9 @@ def open_cell():
     pair_id = int(pair_num)
     attr_id = int(attr_num)
 
-    data_pairs = dl.load_data_from_csv(DATA_PATH)
-    dataset = dl.load_data_from_csv(SECTION2_PATH)
+    active_data_path, active_section2_path = get_active_paths()
+    data_pairs = dl.load_data_from_csv(active_data_path)
+    dataset = dl.load_data_from_csv(active_section2_path)
     data_pair_list = dm.DataPairList(data_pairs)
     pair = data_pair_list.get_data_pair(pair_id)
     assert pair is not None, "pair of DATA_PAIR_LIST is null"
