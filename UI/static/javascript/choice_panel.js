@@ -102,7 +102,7 @@ $(document).ready(function() {
         })
         .then(() => {
             alert("Thank you for participating! Your submissions have been recorded.");
-            window.location.reload();
+            window.location.href = "/";
         })
         .catch(() => {
             alert("Submission failed. Please make sure all responses are filled and try again.");
