@@ -10,11 +10,12 @@ from user_state import (
     extract_user_id_from_response_key,
     get_pair_numbers,
     get_partial_level_flags,
-    get_response_keys_for_filename,
+    get_response_keys_for_track,
     get_snapshot_key_for_response_key,
     safe_parse_json,
     selection_to_response_label,
     status_to_level,
+    track_scoped_user_key,
 )
 
 
@@ -71,10 +72,12 @@ def summarize_response_datetime_range(rows):
 def build_redis_csv_rows(
     redis_client,
     filename,
+    track,
     time_window_days=None,
     start_datetime=None,
     end_datetime=None,
     experiment_name=None,
+    legacy_filename=None,
 ):
     """Build export rows by combining Redis state with dataset metadata."""
     data_pairs = dl.load_data_from_csv(filename)
@@ -82,7 +85,7 @@ def build_redis_csv_rows(
     pair_numbers = get_pair_numbers(data_pairs)
     partial_level_flags = get_partial_level_flags(data_pair_list)
 
-    response_keys = get_response_keys_for_filename(redis_client, filename)
+    response_keys = get_response_keys_for_track(redis_client, track, legacy_filename=legacy_filename)
     response_entries = []
     for key in response_keys:
         user_id = extract_user_id_from_response_key(key)
@@ -125,8 +128,12 @@ def build_redis_csv_rows(
         if "character_disclosed_percent_value" in snapshot:
             character_disclosed_percent_value = float(snapshot.get("character_disclosed_percent_value", 0.0))
         else:
-            disclosed_characters = int(redis_client.get(user_id + "_mindfil_disclosed_characters") or 0)
-            total_characters = int(redis_client.get(user_id + "_mindfil_total_characters") or 0)
+            disclosed_characters = int(
+                redis_client.get(track_scoped_user_key(user_id, track, "_mindfil_disclosed_characters")) or 0
+            )
+            total_characters = int(
+                redis_client.get(track_scoped_user_key(user_id, track, "_mindfil_total_characters")) or 0
+            )
             character_disclosed_percent_value = 0.0
             if total_characters > 0:
                 character_disclosed_percent_value = round(100.0 * disclosed_characters / total_characters, 1)
@@ -134,7 +141,7 @@ def build_redis_csv_rows(
         if "privacy_risk_percent_value" in snapshot:
             privacy_risk_percent_value = float(snapshot.get("privacy_risk_percent_value", 0.0))
         else:
-            kapr_value = float(redis_client.get(user_id + "_KAPR") or 0.0)
+            kapr_value = float(redis_client.get(track_scoped_user_key(user_id, track, "_KAPR")) or 0.0)
             privacy_risk_percent_value = round(100.0 * kapr_value, 1)
 
         row = {
@@ -159,8 +166,8 @@ def build_redis_csv_rows(
                     row[key] = int(snapshot_pair_levels[attr_index])
                     continue
 
-                key_row_1 = f"{user_id}-{pair_number}-1-{attr_index}"
-                key_row_2 = f"{user_id}-{pair_number}-2-{attr_index}"
+                key_row_1 = track_scoped_user_key(user_id, track, f"-{pair_number}-1-{attr_index}")
+                key_row_2 = track_scoped_user_key(user_id, track, f"-{pair_number}-2-{attr_index}")
 
                 status_1 = redis_client.get(key_row_1) or "M"
                 status_2 = redis_client.get(key_row_2) or "M"
@@ -597,11 +604,13 @@ def build_pair_record_details(filename):
     return pair_details
 
 
-def process_redis_data(redis_client, filename, time_window_days=None, start_datetime=None, end_datetime=None):
+def process_redis_data(
+    redis_client, filename, track, time_window_days=None, start_datetime=None, end_datetime=None, legacy_filename=None
+):
     """Build per-pair aggregated selection summaries for results view."""
     data_pairs = dl.load_data_from_csv(filename)
 
-    filename_keys = get_response_keys_for_filename(redis_client, filename)
+    filename_keys = get_response_keys_for_track(redis_client, track, legacy_filename=legacy_filename)
     html_elements_list = []
     value_data = [[0, 0, 0, 0, 0, 0, 0] for _ in range(len(data_pairs))]
 

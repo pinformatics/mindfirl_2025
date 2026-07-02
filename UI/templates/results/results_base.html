@@ -2,7 +2,7 @@
 <html lang="en">
     <head>
         <meta charset="utf-8">
-        <title>IRL</title>
+        <title>{{ title }}</title>
         <link rel="icon" type="image/png" href="{{ url_for('static', filename='images/site/tamu-logo.png') }}">
         <link rel="stylesheet" href="{{ url_for('static', filename='css/style.css') }}?v=9999" type="text/css">
         <link rel="stylesheet" href="{{ url_for('static', filename='css/nav_bar.css') }}" type="text/css">
@@ -20,12 +20,17 @@
     </body>   
     <body class="bg-light">
         <!-- <div style="clear:both"></div> -->
+        {% from 'shared/track_switcher.html' import track_switcher %}
         <div class="container pt-3" style="max-width: 88vw;">
+            <div class="mb-3">
+                {{ track_switcher(track, 'results_template', {'window': window_key, 'start': custom_start_value, 'end': custom_end_value}) }}
+            </div>
             <div class="alert alert-info p-3 mb-3" role="alert">
                 <div class="d-flex flex-column flex-lg-row align-items-lg-center gap-5">
                     <div class="small text-nowrap flex-shrink-0 me-4 me-lg-5">Showing results window: <strong>{{ window_label|default('All Time') }}</strong></div>
                     <form id="results-range-form" action="{{ url_for('results_template') }}" method="get" class="d-flex flex-nowrap align-items-center justify-content-lg-end gap-2 p-3 bg-white border rounded shadow-sm" style="overflow-x: auto; min-width: 0; width: 100%;">
-                        <input id="results-window" type="hidden" name="window" value="{{ window_key|default('all') }}">
+                        <input type="hidden" name="track" value="{{ track }}">
+                        <input id="results-window" type="hidden" name="window" value="{{ window_key|default('1d') }}">
                         <input id="results-start" type="hidden" name="start" value="{{ custom_start_value|default('') }}">
                         <input id="results-end" type="hidden" name="end" value="{{ custom_end_value|default('') }}">
                         <label class="small fw-semibold mb-0 text-nowrap flex-shrink-0" for="results-range-display">Date Range</label>

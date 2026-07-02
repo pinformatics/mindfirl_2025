@@ -18,6 +18,11 @@
             </div>
             <form action="{{ url_for('upload_data_csv') }}" method="post" enctype="multipart/form-data" class="d-flex flex-column flex-sm-row gap-2 mb-0 align-items-stretch align-items-sm-center">
                 <input type="hidden" name="csrf_token" value="{{ csrf_token }}">
+                <select name="track" class="form-select">
+                    {% for t_key, t_meta in (tracks or {}).items() %}
+                    <option value="{{ t_key }}" {% if track == t_key %}selected{% endif %}>{{ t_meta.label }}</option>
+                    {% endfor %}
+                </select>
                 <input class="form-control" type="file" name="csv_file" accept=".csv,text/csv" required>
                 <button class="btn btn-primary px-4" type="submit">Upload CSV</button>
             </form>

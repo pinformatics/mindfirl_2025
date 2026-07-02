@@ -21,6 +21,14 @@ def temp_selection_key(user_id):
     return f"{user_id}_temp_user_selections"
 
 
+def track_scoped_user_key(user_id, track, suffix):
+    """Build a per-user, per-track Redis key. The "legacy" pseudo-track uses the
+    old unscoped user_id-only key so pre-split data keeps resolving."""
+    if track == "legacy":
+        return f"{user_id}{suffix}"
+    return f"{user_id}_{track}{suffix}"
+
+
 def load_temp_selections(redis_client, user_id):
     """Load temporary selections for a user from Redis."""
     if not user_id:
@@ -38,17 +46,21 @@ def save_temp_selections(redis_client, user_id, selections):
 
 
 def extract_user_id_from_response_key(key):
-    """Extract the user id from a key like id:<user>___file:<file>."""
-    if "id:" not in key or "___file:" not in key:
+    """Extract the user id from a key like id:<user>___track:<track> (or the
+    legacy id:<user>___file:<file> scheme)."""
+    if "id:" not in key:
         return None
-    return key.split("id:", 1)[1].split("___file:", 1)[0]
+    separator = "___track:" if "___track:" in key else "___file:" if "___file:" in key else None
+    if separator is None:
+        return None
+    return key.split("id:", 1)[1].split(separator, 1)[0]
 
 
-def extract_file_part_from_response_key(key):
-    """Extract the file component from a response key."""
-    if "___file:" not in key:
+def extract_track_part_from_response_key(key):
+    """Extract the track component from a response key."""
+    if "___track:" not in key:
         return ""
-    return key.split("___file:", 1)[1].strip()
+    return key.split("___track:", 1)[1].strip()
 
 
 def get_snapshot_key_for_response_key(response_key):
@@ -56,8 +68,15 @@ def get_snapshot_key_for_response_key(response_key):
     return response_key + "___snapshot"
 
 
-def get_response_keys_for_filename(redis_client, filename):
-    """Return response keys that match a dataset filename."""
+def extract_file_part_from_response_key(key):
+    """Extract the legacy file component from a pre-split response key."""
+    if "___file:" not in key:
+        return ""
+    return key.split("___file:", 1)[1].strip()
+
+
+def _get_legacy_response_keys_for_filename(redis_client, filename):
+    """Return pre-split response keys (old id:<user>___file:<file> scheme) that match a dataset filename."""
     candidate_keys = list(redis_client.scan_iter("id:*___file:*"))
     if not candidate_keys:
         return []
@@ -79,6 +98,18 @@ def get_response_keys_for_filename(redis_client, filename):
             matched.append(key)
 
     return sorted(set(matched))
+
+
+def get_response_keys_for_track(redis_client, track, legacy_filename=None):
+    """Return response keys for a track. The "legacy" pseudo-track scans the
+    old id:<user>___file:<file> scheme against legacy_filename instead."""
+    if track == "legacy":
+        if not legacy_filename:
+            return []
+        return _get_legacy_response_keys_for_filename(redis_client, legacy_filename)
+
+    requested = track.strip()
+    return sorted(set(redis_client.scan_iter("id:*___track:" + requested)))
 
 
 def get_pair_numbers(data_pairs):
