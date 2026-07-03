@@ -23,7 +23,7 @@
         {% from 'shared/track_switcher.html' import track_switcher %}
         <div class="container pt-3" style="max-width: 88vw;">
             <div class="mb-3">
-                {{ track_switcher(track, 'results_template', {'window': window_key, 'start': custom_start_value, 'end': custom_end_value}) }}
+                {{ track_switcher(track, 'results_template', {'window': window_key, 'start': custom_start_value, 'end': custom_end_value}, tracks=tracks) }}
             </div>
             <div class="alert alert-info p-3 mb-3" role="alert">
                 <div class="d-flex flex-column flex-lg-row align-items-lg-center gap-5">

@@ -13,7 +13,7 @@
 {% from 'shared/track_switcher.html' import track_switcher %}
 <main class="container py-4" style="max-width: 1040px;">
     <div class="mb-3">
-        {{ track_switcher(track, 'experiments_page') }}
+        {{ track_switcher(track, 'experiments_page', tracks=tracks) }}
     </div>
     {% if track == 'legacy' %}
     <div class="alert alert-warning py-2" role="alert">

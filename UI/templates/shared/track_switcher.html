@@ -1,4 +1,4 @@
-{% macro track_switcher(current_track, endpoint, extra_args={}, show_legacy=true) %}
+{% macro track_switcher(current_track, endpoint, extra_args={}, show_legacy=true, tracks={}) %}
 <div class="btn-group flex-wrap" role="group" aria-label="Track switcher">
     {% for t_key, t_meta in (tracks or {}).items() %}
     <a href="{{ url_for(endpoint, track=t_key, **extra_args) }}"
