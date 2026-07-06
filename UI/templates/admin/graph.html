@@ -611,10 +611,15 @@ const renderPairHoverDetails = (pairIndex) => {
     const rowA = pairFieldKeys.map((key) => `<td class="text-nowrap p-0 px-1 align-top">${escapeHtml(recordA[key])}</td>`).join('');
     const rowB = pairFieldKeys.map((key) => `<td class="text-nowrap p-0 px-1 align-top">${escapeHtml(recordB[key])}</td>`).join('');
 
+    const groundTruthValue = String(pairData.ground_truth || '');
+    const groundTruthLabel = groundTruthValue === '1' ? 'Match' : groundTruthValue === '0' ? 'Non-match' : 'Unknown';
+    const groundTruthBadgeClass = groundTruthValue === '1' ? 'bg-success' : groundTruthValue === '0' ? 'bg-danger' : 'bg-secondary';
+
     pairHoverDetails.innerHTML = `
         <div class="d-flex align-items-center gap-2 text-nowrap mb-1">
             <span class="badge bg-secondary small">${escapeHtml(pairData.pair_label || `Pair ${pairIndex + 1}`)}</span>
             <span class="text-muted small">#${escapeHtml(pairData.pair_number || pairIndex + 1)}</span>
+            <span class="badge ${groundTruthBadgeClass} small">Ground Truth: ${escapeHtml(groundTruthLabel)}</span>
         </div>
         <div class="overflow-hidden">
             <table class="table table-sm table-borderless mb-0 small">

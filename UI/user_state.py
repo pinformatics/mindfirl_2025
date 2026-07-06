@@ -124,6 +124,12 @@ def get_pair_numbers(data_pairs):
     return [str(data_pairs[i][0]) for i in range(0, len(data_pairs), 2)]
 
 
+def get_pair_ground_truths(data_pairs):
+    """Return ordered ground truth labels (last column of the dataset) for each
+    pair, aligned with get_pair_numbers. Both rows of a pair share the same value."""
+    return [str(data_pairs[i][-1]) for i in range(0, len(data_pairs), 2)]
+
+
 def get_partial_level_flags(data_pair_list):
     """Determine whether each attribute supports partial display for each pair."""
     partial_flags = []

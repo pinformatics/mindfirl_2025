@@ -41,6 +41,7 @@ from user_state import (
     extract_user_id_from_response_key,
     build_pair_reveal_levels,
     get_response_keys_for_track,
+    get_pair_ground_truths,
     get_pair_numbers,
     get_partial_level_flags,
     get_snapshot_key_for_response_key,
@@ -1125,10 +1126,12 @@ def results_template():
         ids_list = data_pair_list.get_ids()
         icons = data_pair_list.get_icons()[: (len(pairs_formatted) // 2)]
         ids = list(zip(ids_list[0::2], ids_list[1::2]))
+        pair_ground_truths = get_pair_ground_truths(data_pairs)
 
         return render_template(
             "results/results_base.html",
             data=data,
+            pair_ground_truths=pair_ground_truths,
             ids=ids,
             title="{} Results".format(_track_label(track)),
             track=track,

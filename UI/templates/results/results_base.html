@@ -88,6 +88,7 @@
     <body class="bg-light">
         <div class="container" style="max-width: 88vw;">
             <div class="privacy-budget-div" style="width: 100%; margin: 0 0 15px 0; box-sizing: border-box;">
+                <div class="small text-muted mb-1">Average values across all respondents in the current selection</div>
                 <div>Character disclosed:
                     <span>{{ '%.1f'|format(avg_percent_disclosed) ~ '%' if avg_percent_disclosed is not none else 'No data' }}</span>
                 </div>

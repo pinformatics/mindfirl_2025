@@ -8,6 +8,7 @@ import data_model as dm
 from ui_constants import ATTRIBUTE_COLUMNS
 from user_state import (
     extract_user_id_from_response_key,
+    get_pair_ground_truths,
     get_pair_numbers,
     get_partial_level_flags,
     get_response_keys_for_track,
@@ -83,6 +84,7 @@ def build_redis_csv_rows(
     data_pairs = dl.load_data_from_csv(filename)
     data_pair_list = dm.DataPairList(data_pairs)
     pair_numbers = get_pair_numbers(data_pairs)
+    pair_ground_truths = get_pair_ground_truths(data_pairs)
     partial_level_flags = get_partial_level_flags(data_pair_list)
 
     response_keys = get_response_keys_for_track(redis_client, track, legacy_filename=legacy_filename)
@@ -157,6 +159,7 @@ def build_redis_csv_rows(
             pair_num = pair_index + 1
             selection = selections[pair_index].strip() if pair_index < len(selections) else ""
             row[f"pair_{pair_num}_response"] = selection_to_response_label(selection)
+            row[f"pair_{pair_num}_ground_truth"] = pair_ground_truths[pair_index]
 
             snapshot_pair_levels = snapshot_reveal_levels.get(str(pair_num), [])
 
@@ -194,6 +197,10 @@ def build_redis_csv_fieldnames(pair_numbers):
     for pair_index, _ in enumerate(pair_numbers):
         pair_num = pair_index + 1
         fieldnames.append(f"pair_{pair_num}_response")
+
+    for pair_index, _ in enumerate(pair_numbers):
+        pair_num = pair_index + 1
+        fieldnames.append(f"pair_{pair_num}_ground_truth")
 
     fieldnames.extend(["character_disclosed_percent_value", "privacy_risk_percent_value"])
     return fieldnames
@@ -578,6 +585,7 @@ def build_pair_record_details(filename):
             {
                 "pair_label": "Pair {}".format((index // 2) + 1),
                 "pair_number": row_a[0] if row_a else "",
+                "ground_truth": row_a[-1] if row_a else "",
                 "record_a": {
                     "id": row_a[1] if len(row_a) > 1 else "",
                     "ffreq": row_a[2] if len(row_a) > 2 else "",

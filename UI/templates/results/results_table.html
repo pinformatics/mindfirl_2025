@@ -11,7 +11,7 @@
             <div class="table_col7">DoB(M/D/Y)</div>
             <div class="table_col8">Sex</div>
             <div class="table_col9">Race</div>
-            <!-- <div class="table_col10">Results</div> -->
+            <div class="table_col10">Ground Truth</div>
         </div>
         <div>
             {% for r in data %}
@@ -112,6 +112,9 @@
                     <div class="sub_row3" id="{{ ids[loop.index0][1][5] }}">
                         {{ r[1][8]|safe }}
                     </div>
+                </div>
+                <div class="table_col10">
+                    {{ 'Match' if pair_ground_truths[loop.index0] == '1' else 'Non-match' }}
                 </div>
             </div>
             <div style="clear:both"></div>
