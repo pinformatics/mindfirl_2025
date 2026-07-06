@@ -212,6 +212,40 @@
                 </div>
             </div>
         </div>
+
+        <div class="col-12">
+            <div class="card shadow-sm">
+                <div class="card-body">
+                    <h2 class="h5 mb-3">Pair Ground Truth Reference</h2>
+                    <div class="table-responsive">
+                        <table class="table table-sm table-striped align-middle mb-0">
+                            <thead>
+                                <tr>
+                                    <th>Pair</th>
+                                    <th>Ground Truth</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                {% for pd in graph_data.pair_record_details %}
+                                <tr>
+                                    <td>{{ pd.pair_label }}</td>
+                                    <td>
+                                        {% if pd.ground_truth == '1' %}
+                                        <span class="badge bg-success">Match</span>
+                                        {% elif pd.ground_truth == '0' %}
+                                        <span class="badge bg-danger">Non-match</span>
+                                        {% else %}
+                                        <span class="badge bg-secondary">Unknown</span>
+                                        {% endif %}
+                                    </td>
+                                </tr>
+                                {% endfor %}
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+        </div>
     </div>
 </main>
 
