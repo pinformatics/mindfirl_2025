@@ -6,7 +6,7 @@ SECTION2_PATH = "data/section2_priv.csv"
 
 # What the single DATA_PATH constant pointed to before tracks existed; used only
 # to scan for pre-split submissions in the read-only "legacy" admin view.
-LEGACY_DATA_PATH = "data/ppirl_priv.csv"
+LEGACY_DATA_PATH = "data/ppirl.csv"
 
 TRACKS = {
     "irl_desktop": {"data_path": IRL_DATA_PATH, "label": "IRL Desktop"},
