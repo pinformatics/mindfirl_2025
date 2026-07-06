@@ -3,7 +3,7 @@
 import json
 import os
 
-from ui_constants import ATTRIBUTE_COLUMNS
+from ui_constants import ATTRIBUTE_COLUMNS, IRL_GROUP_SUB_TRACKS, IRL_GROUP_TRACK
 
 
 def safe_parse_json(raw_value, default_value):
@@ -102,11 +102,18 @@ def _get_legacy_response_keys_for_filename(redis_client, filename):
 
 def get_response_keys_for_track(redis_client, track, legacy_filename=None):
     """Return response keys for a track. The "legacy" pseudo-track scans the
-    old id:<user>___file:<file> scheme against legacy_filename instead."""
+    old id:<user>___file:<file> scheme against legacy_filename instead. The
+    combined "irl" pseudo-track unions its concrete sub-tracks."""
     if track == "legacy":
         if not legacy_filename:
             return []
         return _get_legacy_response_keys_for_filename(redis_client, legacy_filename)
+
+    if track == IRL_GROUP_TRACK:
+        keys = set()
+        for sub_track in IRL_GROUP_SUB_TRACKS:
+            keys.update(redis_client.scan_iter("id:*___track:" + sub_track))
+        return sorted(keys)
 
     requested = track.strip()
     return sorted(set(redis_client.scan_iter("id:*___track:" + requested)))

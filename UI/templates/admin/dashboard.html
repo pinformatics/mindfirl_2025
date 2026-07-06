@@ -24,6 +24,7 @@
             <form action="{{ url_for('generate_redis_csv') }}" method="post" class="mb-0 d-flex gap-2 align-items-center">
                 <input type="hidden" name="csrf_token" value="{{ csrf_token }}">
                 <select name="track" class="form-select form-select-sm" style="width: auto;">
+                    <option value="irl" selected>IRL (Combined)</option>
                     {% for t_key, t_meta in (tracks or {}).items() %}
                     <option value="{{ t_key }}">{{ t_meta.label }}</option>
                     {% endfor %}

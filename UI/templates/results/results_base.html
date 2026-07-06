@@ -22,9 +22,14 @@
         <!-- <div style="clear:both"></div> -->
         {% from 'shared/track_switcher.html' import track_switcher %}
         <div class="container pt-3" style="max-width: 88vw;">
-            <div class="mb-3">
-                {{ track_switcher(track, 'results_template', {'window': window_key, 'start': custom_start_value, 'end': custom_end_value}, tracks=tracks) }}
+            <div class="mb-2">
+                {{ track_switcher(track, 'results_template', top_tracks, {'window': window_key, 'start': custom_start_value, 'end': custom_end_value}) }}
             </div>
+            {% if track in irl_sub_tracks|map(attribute='key')|list %}
+            <div class="mb-3">
+                {{ track_switcher(track, 'results_template', irl_sub_tracks, {'window': window_key, 'start': custom_start_value, 'end': custom_end_value}, size="sm") }}
+            </div>
+            {% endif %}
             <div class="alert alert-info p-3 mb-3" role="alert">
                 <div class="d-flex flex-column flex-lg-row align-items-lg-center gap-5">
                     <div class="small text-nowrap flex-shrink-0 me-4 me-lg-5">Showing results window: <strong>{{ window_label|default('All Time') }}</strong></div>

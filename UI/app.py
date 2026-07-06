@@ -28,7 +28,11 @@ from ui_constants import (
     ADMIN_LOGIN_LOCK_SECONDS,
     ADMIN_MAX_FAILED_ATTEMPTS,
     ATTRIBUTE_COLUMNS,
+    DEFAULT_ADMIN_TRACK,
     DEFAULT_TRACK,
+    IRL_DATA_PATH,
+    IRL_GROUP_SUB_TRACKS,
+    IRL_GROUP_TRACK,
     LEGACY_DATA_PATH,
     SECTION2_PATH,
     TRACKS,
@@ -245,25 +249,57 @@ def get_active_data_path():
 
 
 def _resolve_track(source):
-    """Resolve a track identifier from request.args/request.form, falling back to the default track."""
+    """Resolve an admin-viewing track identifier from request.args/request.form,
+    falling back to the combined IRL view. Accepts the concrete tracks, the
+    combined "irl" pseudo-track, and the read-only "legacy" pseudo-track."""
+    track = str(source.get("track", "") or DEFAULT_ADMIN_TRACK).strip()
+    if track not in TRACKS and track not in ("legacy", IRL_GROUP_TRACK):
+        track = DEFAULT_ADMIN_TRACK
+    return track
+
+
+def _resolve_submission_track(source):
+    """Resolve a track identifier for actions that must target one concrete,
+    real submission track (CSV upload) -- never the combined "irl" view or "legacy"."""
     track = str(source.get("track", "") or DEFAULT_TRACK).strip()
-    if track not in TRACKS and track != "legacy":
+    if track not in TRACKS:
         track = DEFAULT_TRACK
     return track
 
 
 def _track_data_path(track):
-    """Return the dataset path for a track, including the read-only legacy pseudo-track."""
+    """Return the dataset path for a track, including the combined "irl" and
+    read-only "legacy" pseudo-tracks."""
     if track == "legacy":
         return LEGACY_DATA_PATH
+    if track == IRL_GROUP_TRACK:
+        return IRL_DATA_PATH
     return TRACKS[track]["data_path"]
 
 
 def _track_label(track):
-    """Return the display label for a track, including the read-only legacy pseudo-track."""
+    """Return the display label for a track, including the combined "irl" and
+    read-only "legacy" pseudo-tracks."""
     if track == "legacy":
         return "Legacy"
+    if track == IRL_GROUP_TRACK:
+        return "IRL"
     return TRACKS[track]["label"]
+
+
+# Top-level admin track switcher: IRL (combined) / MiNDFiRL / Legacy.
+ADMIN_TOP_TRACK_ITEMS = [
+    {"key": IRL_GROUP_TRACK, "label": "IRL", "match": [IRL_GROUP_TRACK] + IRL_GROUP_SUB_TRACKS},
+    {"key": "mindfirl", "label": "MiNDFiRL"},
+    {"key": "legacy", "label": "Legacy"},
+]
+
+# Sub-tabs shown only when the IRL group is active: Both (combined) / Desktop / Mobile.
+ADMIN_IRL_SUB_TRACK_ITEMS = [
+    {"key": IRL_GROUP_TRACK, "label": "Both"},
+    {"key": "irl_desktop", "label": "Desktop"},
+    {"key": "irl_mobile", "label": "Mobile"},
+]
 
 
 @app.route("/admin", methods=["GET", "POST"])
@@ -635,16 +671,14 @@ def generate_redis_csv():
 @admin_required
 def upload_csv_page():
     """Render dedicated admin page for dataset CSV uploads."""
-    return render_template("admin/upload_csv.html", tracks=TRACKS, track=_resolve_track(request.args))
+    return render_template("admin/upload_csv.html", tracks=TRACKS, track=_resolve_submission_track(request.args))
 
 
 @app.route("/admin/upload_data_csv", methods=["POST"])
 @admin_required
 def upload_data_csv():
     """Upload an exported admin report CSV when format is valid."""
-    track = _resolve_track(request.form)
-    if track == "legacy":
-        track = DEFAULT_TRACK
+    track = _resolve_submission_track(request.form)
     data_path = TRACKS[track]["data_path"]
 
     uploaded = request.files.get("csv_file")
@@ -732,7 +766,8 @@ def export_graph_view():
         "admin/graph.html",
         title="{} Response Graphs".format(_track_label(track)),
         track=track,
-        tracks=TRACKS,
+        top_tracks=ADMIN_TOP_TRACK_ITEMS,
+        irl_sub_tracks=ADMIN_IRL_SUB_TRACK_ITEMS,
         student_count=len(rows),
         graph_data=graph_data,
         window_key=window_key,
@@ -760,7 +795,8 @@ def experiments_page():
         "admin/experiments.html",
         title="{} Experiments".format(_track_label(track)),
         track=track,
-        tracks=TRACKS,
+        top_tracks=ADMIN_TOP_TRACK_ITEMS,
+        irl_sub_tracks=ADMIN_IRL_SUB_TRACK_ITEMS,
         experiment_names=experiment_names,
         experiment_range_timeline=_build_experiment_range_timeline(rows, experiment_names=experiment_names),
         experiment_summary=_build_experiment_summary(rows, experiment_names=experiment_names),
@@ -1072,7 +1108,8 @@ def results_template():
             ids=ids,
             title="{} Results".format(_track_label(track)),
             track=track,
-            tracks=TRACKS,
+            top_tracks=ADMIN_TOP_TRACK_ITEMS,
+            irl_sub_tracks=ADMIN_IRL_SUB_TRACK_ITEMS,
             icons=icons,
             results_selections=selection_html_elements,
             window_key=window_key,

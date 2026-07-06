@@ -1,12 +1,9 @@
-{% macro track_switcher(current_track, endpoint, extra_args={}, show_legacy=true, tracks={}) %}
+{% macro track_switcher(current_track, endpoint, items, extra_args={}, size="sm") %}
 <div class="btn-group flex-wrap" role="group" aria-label="Track switcher">
-    {% for t_key, t_meta in (tracks or {}).items() %}
-    <a href="{{ url_for(endpoint, track=t_key, **extra_args) }}"
-       class="btn btn-sm {{ 'btn-primary' if current_track == t_key else 'btn-outline-primary' }}">{{ t_meta.label }}</a>
+    {% for item in items %}
+    {% set is_active = current_track in (item.match or [item.key]) %}
+    <a href="{{ url_for(endpoint, track=item.key, **extra_args) }}"
+       class="btn btn-{{ size }} {{ 'btn-primary' if is_active else 'btn-outline-primary' }}">{{ item.label }}</a>
     {% endfor %}
-    {% if show_legacy %}
-    <a href="{{ url_for(endpoint, track='legacy', **extra_args) }}"
-       class="btn btn-sm {{ 'btn-secondary' if current_track == 'legacy' else 'btn-outline-secondary' }}">Legacy</a>
-    {% endif %}
 </div>
 {% endmacro %}
