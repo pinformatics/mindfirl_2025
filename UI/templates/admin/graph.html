@@ -231,9 +231,9 @@
                                     <td>{{ pd.pair_label }}</td>
                                     <td>
                                         {% if pd.ground_truth == '1' %}
-                                        <span class="badge bg-success">Match</span>
+                                        <span class="badge bg-success">Same</span>
                                         {% elif pd.ground_truth == '0' %}
-                                        <span class="badge bg-danger">Non-match</span>
+                                        <span class="badge bg-danger">Different</span>
                                         {% else %}
                                         <span class="badge bg-secondary">Unknown</span>
                                         {% endif %}
@@ -646,7 +646,7 @@ const renderPairHoverDetails = (pairIndex) => {
     const rowB = pairFieldKeys.map((key) => `<td class="text-nowrap p-0 px-1 align-top">${escapeHtml(recordB[key])}</td>`).join('');
 
     const groundTruthValue = String(pairData.ground_truth || '');
-    const groundTruthLabel = groundTruthValue === '1' ? 'Match' : groundTruthValue === '0' ? 'Non-match' : 'Unknown';
+    const groundTruthLabel = groundTruthValue === '1' ? 'Same' : groundTruthValue === '0' ? 'Different' : 'Unknown';
     const groundTruthBadgeClass = groundTruthValue === '1' ? 'bg-success' : groundTruthValue === '0' ? 'bg-danger' : 'bg-secondary';
 
     pairHoverDetails.innerHTML = `

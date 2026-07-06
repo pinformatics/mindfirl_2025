@@ -187,8 +187,14 @@ h6 {
        and can be flex-shrunk down to its 1000px min-width floor; at that floor
        there is only ~170px of unused space after table_col1-9, so this column
        must stay well under that regardless of viewport width. */
-    width: 90px;
+    width: 100px;
     float: left;
+}
+
+.table_col_ground_truth_value {
+    height: 124px;
+    line-height: 124px;
+    text-align: center;
 }
 
 #column-pagination-controls {
