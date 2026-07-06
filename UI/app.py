@@ -1095,6 +1095,24 @@ def results_template():
             legacy_filename=LEGACY_DATA_PATH,
         )
 
+        avg_percent_disclosed = None
+        if track == "mindfirl":
+            disclosure_rows, _ = build_redis_csv_rows(
+                r,
+                data_path,
+                track,
+                time_window_days=window_days,
+                start_datetime=custom_start,
+                end_datetime=custom_end,
+                legacy_filename=LEGACY_DATA_PATH,
+            )
+            if disclosure_rows:
+                avg_percent_disclosed = round(
+                    sum(float(row.get("character_disclosed_percent_value", 0.0) or 0.0) for row in disclosure_rows)
+                    / len(disclosure_rows),
+                    1,
+                )
+
         data_pair_list = dm.DataPairList(data_pairs)
         pairs_formatted = data_pair_list.get_data_display("full")
         data = list(zip(pairs_formatted[0::2], pairs_formatted[1::2]))
@@ -1116,6 +1134,7 @@ def results_template():
             window_label=window_label,
             custom_start_value=_to_datetime_local_value(custom_start),
             custom_end_value=_to_datetime_local_value(custom_end),
+            avg_percent_disclosed=avg_percent_disclosed,
         )
     except Exception as exc:
         return "Can not open invalid or nonexistent file {} {}".format(data_path, exc), 500
