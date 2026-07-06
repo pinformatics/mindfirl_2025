@@ -1096,6 +1096,7 @@ def results_template():
         )
 
         avg_percent_disclosed = None
+        avg_privacy_risk = None
         if track == "mindfirl":
             disclosure_rows, _ = build_redis_csv_rows(
                 r,
@@ -1109,6 +1110,11 @@ def results_template():
             if disclosure_rows:
                 avg_percent_disclosed = round(
                     sum(float(row.get("character_disclosed_percent_value", 0.0) or 0.0) for row in disclosure_rows)
+                    / len(disclosure_rows),
+                    1,
+                )
+                avg_privacy_risk = round(
+                    sum(float(row.get("privacy_risk_percent_value", 0.0) or 0.0) for row in disclosure_rows)
                     / len(disclosure_rows),
                     1,
                 )
@@ -1135,6 +1141,8 @@ def results_template():
             custom_start_value=_to_datetime_local_value(custom_start),
             custom_end_value=_to_datetime_local_value(custom_end),
             avg_percent_disclosed=avg_percent_disclosed,
+            avg_privacy_risk=avg_privacy_risk,
+            privacy_budget=int(settings["privacy_budget"]),
         )
     except Exception as exc:
         return "Can not open invalid or nonexistent file {} {}".format(data_path, exc), 500
