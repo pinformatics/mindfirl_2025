@@ -21,8 +21,15 @@
                 <h2 class="h5 mb-1 text-primary">Export Responses</h2>
                 <p class="mb-0 text-muted">Download response and disclosure data as CSV.</p>
             </div>
-            <form action="{{ url_for('generate_redis_csv') }}" method="post" class="mb-0">
+            <form action="{{ url_for('generate_redis_csv') }}" method="post" class="mb-0 d-flex gap-2 align-items-center">
                 <input type="hidden" name="csrf_token" value="{{ csrf_token }}">
+                <select name="track" class="form-select form-select-sm" style="width: auto;">
+                    <option value="irl" selected>IRL (Combined)</option>
+                    {% for t_key, t_meta in (tracks or {}).items() %}
+                    <option value="{{ t_key }}">{{ t_meta.label }}</option>
+                    {% endfor %}
+                    <option value="legacy">Legacy</option>
+                </select>
                 <button class="btn btn-primary px-4" type="submit">Download CSV</button>
             </form>
         </div>

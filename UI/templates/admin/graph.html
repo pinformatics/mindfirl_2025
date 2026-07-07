@@ -41,7 +41,16 @@
 {% endblock %}
 
 {% block content %}
+{% from 'shared/track_switcher.html' import track_switcher %}
 <main class="container-fluid py-2" style="padding-inline: clamp(2.5rem, 6vw, 8rem) !important;">
+    <div class="mb-2">
+        {{ track_switcher(track, 'export_graph_view', top_tracks, {'window': window_key, 'start': custom_start_value, 'end': custom_end_value, 'exp_name': selected_exp_name}) }}
+    </div>
+    {% if track in irl_sub_tracks|map(attribute='key')|list %}
+    <div class="mb-2">
+        {{ track_switcher(track, 'export_graph_view', irl_sub_tracks, {'window': window_key, 'start': custom_start_value, 'end': custom_end_value, 'exp_name': selected_exp_name}, size="sm") }}
+    </div>
+    {% endif %}
     <div class="alert alert-info p-3 mb-2" role="alert">
         <div class="d-flex flex-column flex-lg-row justify-content-between align-items-lg-center gap-3">
             <div id="graph-summary-block" class="flex-grow-1">
@@ -61,7 +70,8 @@
                 </div>
             </div>
             <form id="graph-range-form" action="{{ url_for('export_graph_view') }}" method="get" class="d-flex flex-wrap flex-lg-nowrap align-items-center justify-content-lg-end gap-2 p-3 bg-white border rounded shadow-sm" style="max-width: 100%;">
-                <input id="graph-window" type="hidden" name="window" value="{{ window_key|default('all') }}">
+                <input type="hidden" name="track" value="{{ track }}">
+                <input id="graph-window" type="hidden" name="window" value="{{ window_key|default('1d') }}">
                 <input id="graph-start" type="hidden" name="start" value="{{ custom_start_value|default('') }}">
                 <input id="graph-end" type="hidden" name="end" value="{{ custom_end_value|default('') }}">
                 <label class="small fw-semibold mb-0 text-nowrap flex-shrink-0" for="graph-exp-name">Experiment</label>
@@ -198,6 +208,40 @@
                         <canvas id="revealLevelsChart" class="w-100 h-100"></canvas>
                     </div>
                     <div id="pairHoverDetails" class="position-absolute start-0 top-0 border bg-white shadow rounded-2 p-2 small d-none pe-none" style="z-index:30;">
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <div class="col-12">
+            <div class="card shadow-sm">
+                <div class="card-body">
+                    <h2 class="h5 mb-3">Pair Ground Truth Reference</h2>
+                    <div class="table-responsive">
+                        <table class="table table-sm table-striped align-middle mb-0">
+                            <thead>
+                                <tr>
+                                    <th>Pair</th>
+                                    <th>Ground Truth</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                {% for pd in graph_data.pair_record_details %}
+                                <tr>
+                                    <td>{{ pd.pair_label }}</td>
+                                    <td>
+                                        {% if pd.ground_truth == '1' %}
+                                        <span class="badge bg-success">Same</span>
+                                        {% elif pd.ground_truth == '0' %}
+                                        <span class="badge bg-danger">Different</span>
+                                        {% else %}
+                                        <span class="badge bg-secondary">Unknown</span>
+                                        {% endif %}
+                                    </td>
+                                </tr>
+                                {% endfor %}
+                            </tbody>
+                        </table>
                     </div>
                 </div>
             </div>
@@ -601,10 +645,15 @@ const renderPairHoverDetails = (pairIndex) => {
     const rowA = pairFieldKeys.map((key) => `<td class="text-nowrap p-0 px-1 align-top">${escapeHtml(recordA[key])}</td>`).join('');
     const rowB = pairFieldKeys.map((key) => `<td class="text-nowrap p-0 px-1 align-top">${escapeHtml(recordB[key])}</td>`).join('');
 
+    const groundTruthValue = String(pairData.ground_truth || '');
+    const groundTruthLabel = groundTruthValue === '1' ? 'Same' : groundTruthValue === '0' ? 'Different' : 'Unknown';
+    const groundTruthBadgeClass = groundTruthValue === '1' ? 'bg-success' : groundTruthValue === '0' ? 'bg-danger' : 'bg-secondary';
+
     pairHoverDetails.innerHTML = `
         <div class="d-flex align-items-center gap-2 text-nowrap mb-1">
             <span class="badge bg-secondary small">${escapeHtml(pairData.pair_label || `Pair ${pairIndex + 1}`)}</span>
             <span class="text-muted small">#${escapeHtml(pairData.pair_number || pairIndex + 1)}</span>
+            <span class="badge ${groundTruthBadgeClass} small">Ground Truth: ${escapeHtml(groundTruthLabel)}</span>
         </div>
         <div class="overflow-hidden">
             <table class="table table-sm table-borderless mb-0 small">

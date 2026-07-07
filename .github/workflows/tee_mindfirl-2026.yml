@@ -2,12 +2,11 @@
 # More GitHub Actions for Azure: https://github.com/Azure/actions
 # More info on Python, GitHub Actions, and Azure App Service: https://aka.ms/python-webapps-actions
 
-name: Build and deploy Python app to Azure Web App - mindfirl-2026
+name: Build and deploy Python app to Azure Web App - mindfirl-2026-fix
 
 on:
   push:
     branches:
-      - tee
       - tee-dev
     paths:
       - 'UI/**'

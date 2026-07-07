@@ -1,0 +1,9 @@
+{% macro track_switcher(current_track, endpoint, items, extra_args={}, size="sm") %}
+<div class="btn-group flex-wrap" role="group" aria-label="Track switcher">
+    {% for item in items %}
+    {% set is_active = current_track in (item.match or [item.key]) %}
+    <a href="{{ url_for(endpoint, track=item.key, **extra_args) }}"
+       class="btn btn-{{ size }} {{ 'btn-primary' if is_active else 'btn-outline-primary' }}">{{ item.label }}</a>
+    {% endfor %}
+</div>
+{% endmacro %}

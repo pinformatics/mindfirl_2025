@@ -1,6 +1,6 @@
 {% extends 'admin/base.html' %}
 
-{% block page_title %}Experiments{% endblock %}
+{% block page_title %}{{ title }}{% endblock %}
 {% block header_title %}Experiments{% endblock %}
 {% block header_back %}{% set header_back_url = url_for('admin_page') %}{% endblock %}
 
@@ -10,13 +10,29 @@
 {% endblock %}
 
 {% block content %}
+{% from 'shared/track_switcher.html' import track_switcher %}
 <main class="container py-4" style="max-width: 1040px;">
+    <div class="mb-2">
+        {{ track_switcher(track, 'experiments_page', top_tracks) }}
+    </div>
+    {% if track in irl_sub_tracks|map(attribute='key')|list %}
+    <div class="mb-3">
+        {{ track_switcher(track, 'experiments_page', irl_sub_tracks, size="sm") }}
+    </div>
+    {% endif %}
+    {% if track == 'legacy' %}
+    <div class="alert alert-warning py-2" role="alert">
+        Legacy is read-only historical data from before tracks existed. Experiment management is disabled here.
+    </div>
+    {% endif %}
+
     {% if status and message %}
     <div class="alert {% if status == 'success' %}alert-success{% else %}alert-danger{% endif %} py-2" role="alert">
         {{ message }}
     </div>
     {% endif %}
 
+    {% if track != 'legacy' %}
     <div class="modal fade" id="create-experiment-modal" tabindex="-1" aria-hidden="true">
         <div class="modal-dialog modal-lg modal-dialog-scrollable">
             <div class="modal-content">
@@ -29,6 +45,7 @@
                         <h4 class="h6 text-primary mb-2">Create Experiment Label</h4>
                         <form action="{{ url_for('create_experiment') }}" method="post" class="row g-2 align-items-end">
                             <input type="hidden" name="csrf_token" value="{{ csrf_token }}">
+                            <input type="hidden" name="track" value="{{ track }}">
                             <div class="col-12 col-md-8">
                                 <label for="create-exp-name" class="form-label mb-1">Experiment Name</label>
                                 <input id="create-exp-name" name="exp_name" type="text" class="form-control" placeholder="e.g., pilot_apr_week1" required>
@@ -54,6 +71,7 @@
             </div>
         </div>
     </div>
+    {% endif %}
 
     <div class="card shadow-sm">
         <div class="card-body">
@@ -68,9 +86,11 @@
 
             <div class="d-flex flex-column flex-md-row justify-content-between align-items-md-center gap-2 mb-3">
                 <h2 class="h5 text-primary mb-0">Experiment Summary</h2>
+                {% if track != 'legacy' %}
                 <button type="button" class="btn btn-primary btn-sm" data-bs-toggle="modal" data-bs-target="#create-experiment-modal">
                     Create Experiment
                 </button>
+                {% endif %}
             </div>
             {% if experiment_summary %}
             <div class="table-responsive">
@@ -94,6 +114,7 @@
                             <td>{{ item.min_iso or '-' }}</td>
                             <td>{{ item.max_iso or '-' }}</td>
                             <td class="text-end">
+                                {% if track != 'legacy' %}
                                 <button
                                     type="button"
                                     class="btn btn-sm btn-outline-primary"
@@ -102,6 +123,7 @@
                                 >
                                     Edit
                                 </button>
+                                {% endif %}
                             </td>
                         </tr>
                         {% endfor %}
@@ -114,6 +136,7 @@
         </div>
     </div>
 
+    {% if track != 'legacy' %}
     {% for item in experiment_summary %}
     <div class="modal fade" id="experiment-edit-modal-{{ loop.index }}" tabindex="-1" aria-hidden="true">
         <div class="modal-dialog modal-lg modal-dialog-scrollable">
@@ -132,6 +155,7 @@
                             class="row g-2"
                         >
                             <input type="hidden" name="csrf_token" value="{{ csrf_token }}">
+                            <input type="hidden" name="track" value="{{ track }}">
                             <input type="hidden" name="original_exp_name" value="{{ item.exp_name }}">
                             <div class="col-12">
                                 <label class="form-label mb-1">Experiment Name</label>
@@ -163,6 +187,7 @@
                             <div class="col-12 col-md-6">
                                 <form action="{{ url_for('clear_experiment_points') }}" method="post" class="d-grid">
                                     <input type="hidden" name="csrf_token" value="{{ csrf_token }}">
+                                    <input type="hidden" name="track" value="{{ track }}">
                                     <input type="hidden" name="exp_name" value="{{ item.exp_name }}">
                                     <button type="submit" class="btn btn-danger">Delete Label</button>
                                 </form>
@@ -174,6 +199,7 @@
         </div>
     </div>
     {% endfor %}
+    {% endif %}
 </main>
 <script id="experiment-timeline-data-json" type="application/json">{{ experiment_range_timeline | tojson }}</script>
 {% endblock %}

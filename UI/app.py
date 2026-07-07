@@ -28,19 +28,27 @@ from ui_constants import (
     ADMIN_LOGIN_LOCK_SECONDS,
     ADMIN_MAX_FAILED_ATTEMPTS,
     ATTRIBUTE_COLUMNS,
-    DATA_PATH,
+    DEFAULT_ADMIN_TRACK,
+    DEFAULT_TRACK,
+    IRL_DATA_PATH,
+    IRL_GROUP_SUB_TRACKS,
+    IRL_GROUP_TRACK,
+    LEGACY_DATA_PATH,
     SECTION2_PATH,
+    TRACKS,
 )
 from user_state import (
     extract_user_id_from_response_key,
     build_pair_reveal_levels,
-    get_response_keys_for_filename,
+    get_response_keys_for_track,
+    get_pair_ground_truths,
     get_pair_numbers,
     get_partial_level_flags,
     get_snapshot_key_for_response_key,
     load_temp_selections,
     safe_parse_json,
     save_temp_selections,
+    track_scoped_user_key,
 )
 
 app = Flask(__name__)
@@ -135,9 +143,10 @@ def admin_required(handler):
     return decorated_function
 
 
-def _build_results_context(user_id, disclosure_setting):
+def _build_results_context(user_id, track, disclosure_setting):
     """Initialize a user session and return data needed for results templates."""
-    data_pairs = dl.load_data_from_csv(DATA_PATH)
+    data_path = TRACKS[track]["data_path"]
+    data_pairs = dl.load_data_from_csv(data_path)
     dataset = dl.load_data_from_csv(SECTION2_PATH)
 
     data_pair_list = dm.DataPairList(data_pairs)
@@ -151,13 +160,13 @@ def _build_results_context(user_id, disclosure_setting):
     save_temp_selections(r, user_id, ["" for _ in range(len(pairs_formatted) // 2)])
 
     total_characters = data_pair_list.get_total_characters()
-    r.set(user_id + "_mindfil_total_characters", total_characters)
-    r.set(user_id + "_mindfil_disclosed_characters", 0)
-    r.set(user_id + "_KAPR", 0)
+    r.set(track_scoped_user_key(user_id, track, "_mindfil_total_characters"), total_characters)
+    r.set(track_scoped_user_key(user_id, track, "_mindfil_disclosed_characters"), 0)
+    r.set(track_scoped_user_key(user_id, track, "_KAPR"), 0)
 
     for id_row in ids_list:
         for attribute_index in range(6):
-            r.set(user_id + "-" + id_row[attribute_index], "M")
+            r.set(track_scoped_user_key(user_id, track, "-" + id_row[attribute_index]), "M")
 
     delta = []
     delta_cdp = []
@@ -167,7 +176,7 @@ def _build_results_context(user_id, disclosure_setting):
         delta += dm.KAPR_delta(dataset, data_pair, display_status, len(data_pairs))
         delta_cdp += dm.cdp_delta(data_pair, display_status, 0, total_characters)
 
-    choices_key = user_id + "_choices"
+    choices_key = track_scoped_user_key(user_id, track, "_choices")
     previous_choices = r.get(choices_key)
     choices = json.loads(previous_choices) if previous_choices else {}
 
@@ -181,12 +190,12 @@ def _build_results_context(user_id, disclosure_setting):
     }
 
 
-def _display_results_page(filename, template_name, disclosure_setting):
+def _display_results_page(track, template_name, disclosure_setting):
     """Render an interactive results page and initialize user session keys."""
     user_id = request.cookies.get("user_id") or str(uuid.uuid4())
 
     try:
-        context = _build_results_context(user_id, disclosure_setting)
+        context = _build_results_context(user_id, track, disclosure_setting)
     except redis.ConnectionError as exc:
         return (
             "Redis connection failed: {}. Configure REDIS_URL in UI/.env or run a local Redis instance."
@@ -194,7 +203,7 @@ def _display_results_page(filename, template_name, disclosure_setting):
             500,
         )
     except Exception as exc:
-        return "Can not open invalid or nonexistent file {} {} {}".format(filename, exc, os.getcwd()), 500
+        return "Can not open invalid or nonexistent file {} {} {}".format(TRACKS[track]["data_path"], exc, os.getcwd()), 500
 
     logging.error("display_results_page{}".format(user_id))
 
@@ -203,7 +212,7 @@ def _display_results_page(filename, template_name, disclosure_setting):
             template_name,
             data=context["data"],
             ids=context["ids"],
-            title="Interactive Record Linkage",
+            title=TRACKS[track]["label"],
             icons=context["icons"],
             delta=context["delta"],
             delta_cdp=context["delta_cdp"],
@@ -219,7 +228,79 @@ def _display_results_page(filename, template_name, disclosure_setting):
         httponly=True,
         samesite=app.config["SESSION_COOKIE_SAMESITE"],
     )
+    response.set_cookie(
+        "active_track",
+        track,
+        secure=app.config["SESSION_COOKIE_SECURE"],
+        httponly=True,
+        samesite=app.config["SESSION_COOKIE_SAMESITE"],
+    )
     return response
+
+
+def get_active_track():
+    """Return the visitor's active track, sourced from the active_track cookie."""
+    track = request.cookies.get("active_track", DEFAULT_TRACK)
+    return track if track in TRACKS else DEFAULT_TRACK
+
+
+def get_active_data_path():
+    """Return the dataset path for the visitor's active track."""
+    return TRACKS[get_active_track()]["data_path"]
+
+
+def _resolve_track(source):
+    """Resolve an admin-viewing track identifier from request.args/request.form,
+    falling back to the combined IRL view. Accepts the concrete tracks, the
+    combined "irl" pseudo-track, and the read-only "legacy" pseudo-track."""
+    track = str(source.get("track", "") or DEFAULT_ADMIN_TRACK).strip()
+    if track not in TRACKS and track not in ("legacy", IRL_GROUP_TRACK):
+        track = DEFAULT_ADMIN_TRACK
+    return track
+
+
+def _resolve_submission_track(source):
+    """Resolve a track identifier for actions that must target one concrete,
+    real submission track (CSV upload) -- never the combined "irl" view or "legacy"."""
+    track = str(source.get("track", "") or DEFAULT_TRACK).strip()
+    if track not in TRACKS:
+        track = DEFAULT_TRACK
+    return track
+
+
+def _track_data_path(track):
+    """Return the dataset path for a track, including the combined "irl" and
+    read-only "legacy" pseudo-tracks."""
+    if track == "legacy":
+        return LEGACY_DATA_PATH
+    if track == IRL_GROUP_TRACK:
+        return IRL_DATA_PATH
+    return TRACKS[track]["data_path"]
+
+
+def _track_label(track):
+    """Return the display label for a track, including the combined "irl" and
+    read-only "legacy" pseudo-tracks."""
+    if track == "legacy":
+        return "Legacy"
+    if track == IRL_GROUP_TRACK:
+        return "IRL"
+    return TRACKS[track]["label"]
+
+
+# Top-level admin track switcher: IRL (combined) / MiNDFiRL / Legacy.
+ADMIN_TOP_TRACK_ITEMS = [
+    {"key": IRL_GROUP_TRACK, "label": "IRL", "match": [IRL_GROUP_TRACK] + IRL_GROUP_SUB_TRACKS},
+    {"key": "mindfirl", "label": "MiNDFiRL"},
+    {"key": "legacy", "label": "Legacy"},
+]
+
+# Sub-tabs shown only when the IRL group is active: Both (combined) / Desktop / Mobile.
+ADMIN_IRL_SUB_TRACK_ITEMS = [
+    {"key": IRL_GROUP_TRACK, "label": "Both"},
+    {"key": "irl_desktop", "label": "Desktop"},
+    {"key": "irl_mobile", "label": "Mobile"},
+]
 
 
 @app.route("/admin", methods=["GET", "POST"])
@@ -229,12 +310,12 @@ def admin_page():
     # Prevent form-resubmission warnings when navigating back from admin subpages.
     if request.method == "POST":
         return redirect(url_for("admin_page"))
-    return render_template("admin/dashboard.html")
+    return render_template("admin/dashboard.html", tracks=TRACKS)
 
 
 def _parse_admin_time_window(raw_window):
     """Normalize supported admin response windows to days + display metadata."""
-    normalized = str(raw_window or "all").strip().lower()
+    normalized = str(raw_window or "1d").strip().lower()
     mapping = {
         "1d": (1, "Last 1 Day"),
         "7d": (7, "Last 7 Days"),
@@ -242,8 +323,8 @@ def _parse_admin_time_window(raw_window):
         "1y": (365, "Last 1 Year"),
         "all": (None, "All Time"),
     }
-    days, label = mapping.get(normalized, mapping["all"])
-    key = normalized if normalized in mapping else "all"
+    days, label = mapping.get(normalized, mapping["1d"])
+    key = normalized if normalized in mapping else "1d"
     return days, key, label
 
 
@@ -283,8 +364,8 @@ def _resolve_ui_relative_path(path_value):
     return os.path.join(os.path.dirname(os.path.abspath(__file__)), path_value)
 
 
-def _collect_experiment_names(redis_client, filename):
-    """Return sorted non-empty experiment names from stored snapshots for a file."""
+def _collect_experiment_names(redis_client, track):
+    """Return sorted non-empty experiment names from stored snapshots for a track."""
     names = set()
     try:
         stored_labels = redis_client.smembers(ADMIN_EXPERIMENT_LABELS_KEY)
@@ -295,7 +376,7 @@ def _collect_experiment_names(redis_client, filename):
     except redis.RedisError:
         pass
 
-    for response_key in get_response_keys_for_filename(redis_client, filename):
+    for response_key in get_response_keys_for_track(redis_client, track, legacy_filename=LEGACY_DATA_PATH):
         snapshot_key = get_snapshot_key_for_response_key(response_key)
         snapshot = safe_parse_json(redis_client.get(snapshot_key), {})
         exp_name = str(snapshot.get("exp_name", "") or "").strip()
@@ -306,7 +387,7 @@ def _collect_experiment_names(redis_client, filename):
 
 def _update_experiment_labels_for_range(
     redis_client,
-    filename,
+    track,
     new_exp_name,
     start_datetime=None,
     end_datetime=None,
@@ -316,7 +397,7 @@ def _update_experiment_labels_for_range(
     updated = 0
     normalized_new = str(new_exp_name or "").strip()
 
-    for response_key in get_response_keys_for_filename(redis_client, filename):
+    for response_key in get_response_keys_for_track(redis_client, track, legacy_filename=LEGACY_DATA_PATH):
         snapshot_key = get_snapshot_key_for_response_key(response_key)
         snapshot = safe_parse_json(redis_client.get(snapshot_key), {})
         snapshot_datetime = _parse_admin_datetime_input(snapshot.get("saved_at", ""))
@@ -466,9 +547,9 @@ def _build_experiment_range_timeline(rows, experiment_names=None):
     }
 
 
-def _validate_uploaded_dataset_csv(csv_text):
+def _validate_uploaded_dataset_csv(csv_text, data_path):
     """Validate uploaded CSV against exported admin report format."""
-    data_pairs = dl.load_data_from_csv(DATA_PATH)
+    data_pairs = dl.load_data_from_csv(data_path)
     pair_numbers = get_pair_numbers(data_pairs)
     expected_fieldnames = build_redis_csv_fieldnames(pair_numbers)
 
@@ -503,7 +584,7 @@ def _validate_uploaded_dataset_csv(csv_text):
     return True, rows
 
 
-def _import_uploaded_report_rows_to_redis(redis_client, csv_rows, pair_numbers):
+def _import_uploaded_report_rows_to_redis(redis_client, csv_rows, pair_numbers, track):
     """Upsert uploaded admin report rows into Redis response/snapshot keys."""
     if not csv_rows:
         return 0, 0
@@ -519,7 +600,7 @@ def _import_uploaded_report_rows_to_redis(redis_client, csv_rows, pair_numbers):
         if not student_id:
             continue
 
-        response_key = "id:{}___file:{}".format(student_id, DATA_PATH)
+        response_key = "id:{}___track:{}".format(student_id, track)
         existed = bool(redis_client.exists(response_key))
 
         selections = []
@@ -566,7 +647,9 @@ def _import_uploaded_report_rows_to_redis(redis_client, csv_rows, pair_numbers):
 @admin_required
 def generate_redis_csv():
     """Export all submitted responses and reveal levels as CSV."""
-    rows, pair_numbers = build_redis_csv_rows(r, DATA_PATH)
+    track = _resolve_track(request.form)
+    data_path = _track_data_path(track)
+    rows, pair_numbers = build_redis_csv_rows(r, data_path, track, legacy_filename=LEGACY_DATA_PATH)
     fieldnames = build_redis_csv_fieldnames(pair_numbers)
 
     output = StringIO()
@@ -579,7 +662,9 @@ def generate_redis_csv():
     return Response(
         output.getvalue(),
         mimetype="text/csv",
-        headers={"Content-Disposition": "attachment; filename=mindfirl_report_{}.csv".format(timestamp)},
+        headers={
+            "Content-Disposition": "attachment; filename={}_report_{}.csv".format(track, timestamp),
+        },
     )
 
 
@@ -587,18 +672,22 @@ def generate_redis_csv():
 @admin_required
 def upload_csv_page():
     """Render dedicated admin page for dataset CSV uploads."""
-    return render_template("admin/upload_csv.html")
+    return render_template("admin/upload_csv.html", tracks=TRACKS, track=_resolve_submission_track(request.args))
 
 
 @app.route("/admin/upload_data_csv", methods=["POST"])
 @admin_required
 def upload_data_csv():
     """Upload an exported admin report CSV when format is valid."""
+    track = _resolve_submission_track(request.form)
+    data_path = TRACKS[track]["data_path"]
+
     uploaded = request.files.get("csv_file")
     if uploaded is None or not uploaded.filename:
         return redirect(
             url_for(
                 "upload_csv_page",
+                track=track,
                 upload_status="error",
                 upload_message="Not right format: choose a CSV file.",
             )
@@ -610,16 +699,18 @@ def upload_data_csv():
         return redirect(
             url_for(
                 "upload_csv_page",
+                track=track,
                 upload_status="error",
                 upload_message="Not right format: file must be UTF-8 CSV.",
             )
         )
 
-    is_valid, result = _validate_uploaded_dataset_csv(decoded_text)
+    is_valid, result = _validate_uploaded_dataset_csv(decoded_text, data_path)
     if not is_valid:
         return redirect(
             url_for(
                 "upload_csv_page",
+                track=track,
                 upload_status="error",
                 upload_message=result,
             )
@@ -631,12 +722,13 @@ def upload_data_csv():
         for row in result:
             writer.writerow(row)
 
-    pair_numbers = get_pair_numbers(dl.load_data_from_csv(DATA_PATH))
-    inserted, updated = _import_uploaded_report_rows_to_redis(r, result, pair_numbers)
+    pair_numbers = get_pair_numbers(dl.load_data_from_csv(data_path))
+    inserted, updated = _import_uploaded_report_rows_to_redis(r, result, pair_numbers, track)
 
     return redirect(
         url_for(
             "upload_csv_page",
+            track=track,
             upload_status="success",
             upload_message="CSV imported to Redis (inserted: {}, updated: {}).".format(inserted, updated),
         )
@@ -647,6 +739,8 @@ def upload_data_csv():
 @admin_required
 def export_graph_view():
     """Render admin analytics charts derived from submission data."""
+    track = _resolve_track(request.args)
+    data_path = _track_data_path(track)
     window_days, window_key, window_label = _parse_admin_time_window(request.args.get("window"))
     selected_exp_name = str(request.args.get("exp_name", "") or "").strip()
     custom_start = _parse_admin_datetime_input(request.args.get("start"))
@@ -658,18 +752,23 @@ def export_graph_view():
 
     rows, pair_numbers = build_redis_csv_rows(
         r,
-        DATA_PATH,
+        data_path,
+        track,
         time_window_days=window_days,
         start_datetime=custom_start,
         end_datetime=custom_end,
         experiment_name=selected_exp_name or None,
+        legacy_filename=LEGACY_DATA_PATH,
     )
     graph_data = build_graph_payload(rows, pair_numbers)
-    graph_data["pair_record_details"] = build_pair_record_details(DATA_PATH)
+    graph_data["pair_record_details"] = build_pair_record_details(data_path)
     datetime_range = summarize_response_datetime_range(rows)
     return render_template(
         "admin/graph.html",
-        title="Response Graphs",
+        title="{} Response Graphs".format(_track_label(track)),
+        track=track,
+        top_tracks=ADMIN_TOP_TRACK_ITEMS,
+        irl_sub_tracks=ADMIN_IRL_SUB_TRACK_ITEMS,
         student_count=len(rows),
         graph_data=graph_data,
         window_key=window_key,
@@ -680,7 +779,7 @@ def export_graph_view():
         has_custom_range=has_custom_range,
         custom_start_value=_to_datetime_local_value(custom_start),
         custom_end_value=_to_datetime_local_value(custom_end),
-        experiment_names=_collect_experiment_names(r, DATA_PATH),
+        experiment_names=_collect_experiment_names(r, track),
         selected_exp_name=selected_exp_name,
     )
 
@@ -689,11 +788,16 @@ def export_graph_view():
 @admin_required
 def experiments_page():
     """Render admin experiment management page."""
-    rows, _ = build_redis_csv_rows(r, DATA_PATH)
-    experiment_names = _collect_experiment_names(r, DATA_PATH)
+    track = _resolve_track(request.args)
+    data_path = _track_data_path(track)
+    rows, _ = build_redis_csv_rows(r, data_path, track, legacy_filename=LEGACY_DATA_PATH)
+    experiment_names = _collect_experiment_names(r, track)
     return render_template(
         "admin/experiments.html",
-        title="Experiments",
+        title="{} Experiments".format(_track_label(track)),
+        track=track,
+        top_tracks=ADMIN_TOP_TRACK_ITEMS,
+        irl_sub_tracks=ADMIN_IRL_SUB_TRACK_ITEMS,
         experiment_names=experiment_names,
         experiment_range_timeline=_build_experiment_range_timeline(rows, experiment_names=experiment_names),
         experiment_summary=_build_experiment_summary(rows, experiment_names=experiment_names),
@@ -706,30 +810,36 @@ def experiments_page():
 @admin_required
 def create_experiment():
     """Create an experiment label and assign responses within a required datetime range."""
+    track = _resolve_track(request.form)
     exp_name = str(request.form.get("exp_name", "") or "").strip()
     start_dt = _parse_admin_datetime_input(request.form.get("start"))
     end_dt = _parse_admin_datetime_input(request.form.get("end"))
 
     if not exp_name:
-        return redirect(url_for("experiments_page", status="error", message="Experiment name is required."))
+        return redirect(url_for("experiments_page", track=track, status="error", message="Experiment name is required."))
 
     if start_dt is None or end_dt is None:
         return redirect(
             url_for(
                 "experiments_page",
+                track=track,
                 status="error",
                 message="Start and end datetimes are required to create an experiment.",
             )
         )
 
     if start_dt > end_dt:
-        return redirect(url_for("experiments_page", status="error", message="Start datetime must be before end datetime."))
+        return redirect(
+            url_for(
+                "experiments_page", track=track, status="error", message="Start datetime must be before end datetime."
+            )
+        )
 
     r.sadd(ADMIN_EXPERIMENT_LABELS_KEY, exp_name)
 
     updated = _update_experiment_labels_for_range(
         r,
-        DATA_PATH,
+        track,
         exp_name,
         start_datetime=start_dt,
         end_datetime=end_dt,
@@ -737,6 +847,7 @@ def create_experiment():
     return redirect(
         url_for(
             "experiments_page",
+            track=track,
             status="success",
             message="Experiment '{}' created and {} data points assigned by range.".format(exp_name, updated),
         )
@@ -747,32 +858,40 @@ def create_experiment():
 @admin_required
 def assign_experiment_range():
     """Assign exp_name to responses within a datetime range."""
+    track = _resolve_track(request.form)
     exp_name = str(request.form.get("exp_name", "") or "").strip()
     original_exp_name = str(request.form.get("original_exp_name", "") or "").strip()
     start_dt = _parse_admin_datetime_input(request.form.get("start"))
     end_dt = _parse_admin_datetime_input(request.form.get("end"))
 
     if not exp_name:
-        return redirect(url_for("experiments_page", status="error", message="Experiment name is required."))
+        return redirect(url_for("experiments_page", track=track, status="error", message="Experiment name is required."))
     if start_dt is None or end_dt is None:
-        return redirect(url_for("experiments_page", status="error", message="Start and end datetime are required."))
+        return redirect(
+            url_for("experiments_page", track=track, status="error", message="Start and end datetime are required.")
+        )
     if start_dt > end_dt:
-        return redirect(url_for("experiments_page", status="error", message="Start datetime must be before end datetime."))
+        return redirect(
+            url_for(
+                "experiments_page", track=track, status="error", message="Start datetime must be before end datetime."
+            )
+        )
 
     renamed = 0
     if original_exp_name and original_exp_name != exp_name:
-        existing_labels = set(_collect_experiment_names(r, DATA_PATH))
+        existing_labels = set(_collect_experiment_names(r, track))
         if original_exp_name not in existing_labels:
             return redirect(
                 url_for(
                     "experiments_page",
+                    track=track,
                     status="error",
                     message="Only existing labels can be edited.",
                 )
             )
         renamed = _update_experiment_labels_for_range(
             r,
-            DATA_PATH,
+            track,
             exp_name,
             match_exp_name=original_exp_name,
         )
@@ -781,7 +900,7 @@ def assign_experiment_range():
 
     updated = _update_experiment_labels_for_range(
         r,
-        DATA_PATH,
+        track,
         exp_name,
         start_datetime=start_dt,
         end_datetime=end_dt,
@@ -798,6 +917,7 @@ def assign_experiment_range():
     return redirect(
         url_for(
             "experiments_page",
+            track=track,
             status="success",
             message=message,
         )
@@ -808,26 +928,36 @@ def assign_experiment_range():
 @admin_required
 def relabel_experiment():
     """Rename experiment labels across all data points."""
+    track = _resolve_track(request.form)
     from_exp = str(request.form.get("from_exp_name", "") or "").strip()
     to_exp = str(request.form.get("to_exp_name", "") or "").strip()
     if not from_exp or not to_exp:
-        return redirect(url_for("experiments_page", status="error", message="Both from/to experiment names are required."))
+        return redirect(
+            url_for(
+                "experiments_page", track=track, status="error", message="Both from/to experiment names are required."
+            )
+        )
 
-    existing_labels = set(_collect_experiment_names(r, DATA_PATH))
+    existing_labels = set(_collect_experiment_names(r, track))
     if from_exp not in existing_labels or to_exp not in existing_labels:
         return redirect(
             url_for(
                 "experiments_page",
+                track=track,
                 status="error",
                 message="Relabel supports existing labels only.",
             )
         )
     if from_exp == to_exp:
-        return redirect(url_for("experiments_page", status="error", message="Choose different labels for relabeling."))
+        return redirect(
+            url_for(
+                "experiments_page", track=track, status="error", message="Choose different labels for relabeling."
+            )
+        )
 
     updated = _update_experiment_labels_for_range(
         r,
-        DATA_PATH,
+        track,
         to_exp,
         match_exp_name=from_exp,
     )
@@ -836,6 +966,7 @@ def relabel_experiment():
     return redirect(
         url_for(
             "experiments_page",
+            track=track,
             status="success",
             message="Relabeled {} data points from '{}' to '{}'".format(updated, from_exp, to_exp),
         )
@@ -846,15 +977,17 @@ def relabel_experiment():
 @admin_required
 def clear_experiment_points():
     """Clear experiment label from all data points in the selected group."""
+    track = _resolve_track(request.form)
     exp_name = str(request.form.get("exp_name", "") or "").strip()
     if not exp_name:
-        return redirect(url_for("experiments_page", status="error", message="Experiment name is required."))
+        return redirect(url_for("experiments_page", track=track, status="error", message="Experiment name is required."))
 
-    existing_labels = set(_collect_experiment_names(r, DATA_PATH))
+    existing_labels = set(_collect_experiment_names(r, track))
     if exp_name not in existing_labels:
         return redirect(
             url_for(
                 "experiments_page",
+                track=track,
                 status="error",
                 message="Clear supports existing labels only.",
             )
@@ -862,7 +995,7 @@ def clear_experiment_points():
 
     updated = _update_experiment_labels_for_range(
         r,
-        DATA_PATH,
+        track,
         "",
         match_exp_name=exp_name,
     )
@@ -870,6 +1003,7 @@ def clear_experiment_points():
     return redirect(
         url_for(
             "experiments_page",
+            track=track,
             status="success",
             message="Cleared experiment label '{}' from {} data points".format(exp_name, updated),
         )
@@ -923,25 +1057,27 @@ def index():
 @app.route("/disclosing_desktop")
 def disclosing_desktop():
     """Serve desktop UI with full disclosure mode."""
-    return _display_results_page(DATA_PATH, "desktop_base/base.html", "full")
+    return _display_results_page("irl_desktop", "desktop_base/base.html", "full")
 
 
 @app.route("/mobile")
 def mobile():
     """Serve mobile UI with full disclosure mode."""
-    return _display_results_page(DATA_PATH, "mobile_base/mobile.html", "full")
+    return _display_results_page("irl_mobile", "mobile_base/mobile.html", "full")
 
 
 @app.route("/privacy_desktop")
 def privacy_desktop():
     """Serve desktop UI with privacy-preserving display mode."""
-    return _display_results_page(DATA_PATH, "desktop_privacypreserving/base_privacy.html", "masked")
+    return _display_results_page("mindfirl", "desktop_privacypreserving/base_privacy.html", "masked")
 
 
 @app.route("/admin/results")
 @admin_required
 def results_template():
     """Render results page with aggregate selection breakdowns."""
+    track = _resolve_track(request.args)
+    data_path = _track_data_path(track)
     try:
         window_days, window_key, window_label = _parse_admin_time_window(request.args.get("window"))
         custom_start = _parse_admin_datetime_input(request.args.get("start"))
@@ -952,11 +1088,37 @@ def results_template():
 
         data_pairs, selection_html_elements = process_redis_data(
             r,
-            DATA_PATH,
+            data_path,
+            track,
             time_window_days=window_days,
             start_datetime=custom_start,
             end_datetime=custom_end,
+            legacy_filename=LEGACY_DATA_PATH,
         )
+
+        avg_percent_disclosed = None
+        avg_privacy_risk = None
+        if track == "mindfirl":
+            disclosure_rows, _ = build_redis_csv_rows(
+                r,
+                data_path,
+                track,
+                time_window_days=window_days,
+                start_datetime=custom_start,
+                end_datetime=custom_end,
+                legacy_filename=LEGACY_DATA_PATH,
+            )
+            if disclosure_rows:
+                avg_percent_disclosed = round(
+                    sum(float(row.get("character_disclosed_percent_value", 0.0) or 0.0) for row in disclosure_rows)
+                    / len(disclosure_rows),
+                    1,
+                )
+                avg_privacy_risk = round(
+                    sum(float(row.get("privacy_risk_percent_value", 0.0) or 0.0) for row in disclosure_rows)
+                    / len(disclosure_rows),
+                    1,
+                )
 
         data_pair_list = dm.DataPairList(data_pairs)
         pairs_formatted = data_pair_list.get_data_display("full")
@@ -964,21 +1126,29 @@ def results_template():
         ids_list = data_pair_list.get_ids()
         icons = data_pair_list.get_icons()[: (len(pairs_formatted) // 2)]
         ids = list(zip(ids_list[0::2], ids_list[1::2]))
+        pair_ground_truths = get_pair_ground_truths(data_pairs)
 
         return render_template(
             "results/results_base.html",
             data=data,
+            pair_ground_truths=pair_ground_truths,
             ids=ids,
-            title="Interactive Record Linkage Results",
+            title="{} Results".format(_track_label(track)),
+            track=track,
+            top_tracks=ADMIN_TOP_TRACK_ITEMS,
+            irl_sub_tracks=ADMIN_IRL_SUB_TRACK_ITEMS,
             icons=icons,
             results_selections=selection_html_elements,
             window_key=window_key,
             window_label=window_label,
             custom_start_value=_to_datetime_local_value(custom_start),
             custom_end_value=_to_datetime_local_value(custom_end),
+            avg_percent_disclosed=avg_percent_disclosed,
+            avg_privacy_risk=avg_privacy_risk,
+            privacy_budget=int(settings["privacy_budget"]),
         )
     except Exception as exc:
-        return "Can not open invalid or nonexistent file {} {}".format(DATA_PATH, exc), 500
+        return "Can not open invalid or nonexistent file {} {}".format(data_path, exc), 500
 
 
 @app.route("/update_selection", methods=["POST"])
@@ -999,7 +1169,7 @@ def update_selection():
 
     user_selections = load_temp_selections(r, user_id)
     if not user_selections:
-        pair_count = len(dl.load_data_from_csv(DATA_PATH)) // 2
+        pair_count = len(dl.load_data_from_csv(get_active_data_path())) // 2
         user_selections = ["" for _ in range(pair_count)]
 
     if index < 0 or index >= len(user_selections):
@@ -1036,22 +1206,23 @@ def submit_selections():
             ),
         ), 400
 
-    response_key = "id:" + user_id + "___file:" + DATA_PATH
+    track = get_active_track()
+    response_key = "id:" + user_id + "___track:" + track
     r.set(response_key, ",".join(user_selections))
 
-    current_data_pairs = dl.load_data_from_csv(DATA_PATH)
+    current_data_pairs = dl.load_data_from_csv(get_active_data_path())
     current_data_pair_list = dm.DataPairList(current_data_pairs)
     pair_numbers = get_pair_numbers(current_data_pairs)
     partial_level_flags = get_partial_level_flags(current_data_pair_list)
-    pair_reveal_levels = build_pair_reveal_levels(r, user_id, pair_numbers, partial_level_flags)
+    pair_reveal_levels = build_pair_reveal_levels(r, track_scoped_user_key(user_id, track, ""), pair_numbers, partial_level_flags)
 
-    disclosed_characters = int(r.get(user_id + "_mindfil_disclosed_characters") or 0)
-    total_characters = int(r.get(user_id + "_mindfil_total_characters") or 0)
+    disclosed_characters = int(r.get(track_scoped_user_key(user_id, track, "_mindfil_disclosed_characters")) or 0)
+    total_characters = int(r.get(track_scoped_user_key(user_id, track, "_mindfil_total_characters")) or 0)
     character_disclosed_percent_value = 0.0
     if total_characters > 0:
         character_disclosed_percent_value = round(100.0 * disclosed_characters / total_characters, 1)
 
-    kapr_value = float(r.get(user_id + "_KAPR") or 0.0)
+    kapr_value = float(r.get(track_scoped_user_key(user_id, track, "_KAPR")) or 0.0)
     privacy_risk_percent_value = round(100.0 * kapr_value, 1)
 
     snapshot = {
@@ -1084,7 +1255,8 @@ def open_cell():
     pair_id = int(pair_num)
     attr_id = int(attr_num)
 
-    data_pairs = dl.load_data_from_csv(DATA_PATH)
+    track = get_active_track()
+    data_pairs = dl.load_data_from_csv(get_active_data_path())
     dataset = dl.load_data_from_csv(SECTION2_PATH)
     data_pair_list = dm.DataPairList(data_pairs)
     pair = data_pair_list.get_data_pair(pair_id)
@@ -1100,22 +1272,22 @@ def open_cell():
     cdp_increment = cdp_post - cdp_previous
 
     user_id = request.cookies.get("user_id")
-    mindfil_disclosed_characters_key = user_id + "_mindfil_disclosed_characters"
+    mindfil_disclosed_characters_key = track_scoped_user_key(user_id, track, "_mindfil_disclosed_characters")
     r.incrby(mindfil_disclosed_characters_key, cdp_increment)
-    mindfil_total_characters_key = user_id + "_mindfil_total_characters"
+    mindfil_total_characters_key = track_scoped_user_key(user_id, track, "_mindfil_total_characters")
     cdp = 100.0 * int(r.get(mindfil_disclosed_characters_key)) / int(r.get(mindfil_total_characters_key))
     ret["cdp"] = round(cdp, 1)
 
     old_display_status1 = []
     old_display_status2 = []
-    key1_prefix = user_id + "-" + pair_num + "-1-"
-    key2_prefix = user_id + "-" + pair_num + "-2-"
+    key1_prefix = track_scoped_user_key(user_id, track, "-" + pair_num + "-1-")
+    key2_prefix = track_scoped_user_key(user_id, track, "-" + pair_num + "-2-")
     for attr_i in range(6):
         old_display_status1.append(r.get(key1_prefix + str(attr_i)))
         old_display_status2.append(r.get(key2_prefix + str(attr_i)))
 
-    key1 = user_id + "-" + pair_num + "-1-" + attr_num
-    key2 = user_id + "-" + pair_num + "-2-" + attr_num
+    key1 = key1_prefix + attr_num
+    key2 = key2_prefix + attr_num
     if ret["mode"] == "full":
         r.set(key1, "F")
         r.set(key2, "F")
@@ -1134,7 +1306,7 @@ def open_cell():
     kapr = dm.get_KAPR_for_dp(dataset, pair, display_status1, data_size)
     kapr_increment = kapr - old_kapr
 
-    kapr_key = user_id + "_KAPR"
+    kapr_key = track_scoped_user_key(user_id, track, "_KAPR")
     overall_kapr = float(r.get(kapr_key) or 0) + kapr_increment
     r.incrbyfloat(kapr_key, kapr_increment)
     ret["KAPR"] = round(100 * overall_kapr, 1)
