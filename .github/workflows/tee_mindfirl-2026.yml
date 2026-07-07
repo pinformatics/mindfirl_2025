@@ -8,6 +8,7 @@ on:
   push:
     branches:
       - tee-dev
+      - tee
     paths:
       - 'UI/**'
       - '.github/workflows/tee_mindfirl-2026.yml'
