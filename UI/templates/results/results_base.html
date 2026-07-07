@@ -207,6 +207,7 @@
                         cancelLabel: 'Clear',
                     },
                     ranges: {
+                        '1 Day': [moment().startOf('day'), moment().endOf('day')],
                         '7 Days': [moment().subtract(6, 'days').startOf('day'), moment().endOf('day')],
                         '30 Days': [moment().subtract(29, 'days').startOf('day'), moment().endOf('day')],
                         '1 Year': [moment().subtract(12, 'months').startOf('day'), moment().endOf('day')],
@@ -281,7 +282,9 @@
                 startInput.value = startUtc.format('YYYY-MM-DDTHH:mm');
                 endInput.value = endUtc.format('YYYY-MM-DDTHH:mm');
 
-                if (label === '7 Days') {
+                if (label === '1 Day') {
+                    windowInput.value = '1d';
+                } else if (label === '7 Days') {
                     windowInput.value = '7d';
                 } else if (label === '30 Days') {
                     windowInput.value = '30d';
