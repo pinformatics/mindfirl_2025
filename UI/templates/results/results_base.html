@@ -150,6 +150,9 @@
 
             const getPresetBounds = (key) => {
                 const now = moment();
+                if (key === '1d') {
+                    return [now.clone().startOf('day'), now.clone().endOf('day')];
+                }
                 if (key === '7d') {
                     return [now.clone().subtract(6, 'days').startOf('day'), now.clone().endOf('day')];
                 }
